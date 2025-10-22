@@ -1,0 +1,39 @@
+# Telegram Bot Configuration
+telegram:
+  bot_token: "YOUR_BOT_TOKEN_HERE"  # Get from @BotFather on Telegram
+
+# Game Configuration
+game:
+  name: "uCode Amazing Race"
+  max_teams: 10
+  max_team_size: 5
+  
+  # Challenge definitions
+  challenges:
+    - id: 1
+      name: "First Challenge"
+      description: "Find the hidden clue in the main hall"
+      points: 10
+      location: "Main Hall"
+      
+    - id: 2
+      name: "Code Puzzle"
+      description: "Solve the programming puzzle"
+      points: 20
+      location: "Lab A"
+      
+    - id: 3
+      name: "Team Challenge"
+      description: "Complete the team building activity"
+      points: 15
+      location: "Outdoor Area"
+      
+    - id: 4
+      name: "Final Sprint"
+      description: "Race to the finish line"
+      points: 25
+      location: "Starting Point"
+
+# Admin users (Telegram user IDs)
+admins:
+  - 123456789  # Replace with actual admin user IDs
