@@ -9,29 +9,27 @@ game:
   max_team_size: 5
   
   # Challenge definitions
+  # Note: Challenges are completed sequentially - teams must complete
+  # challenge 1 before they can attempt challenge 2, and so on.
   challenges:
     - id: 1
       name: "First Challenge"
       description: "Find the hidden clue in the main hall"
-      points: 10
       location: "Main Hall"
       
     - id: 2
       name: "Code Puzzle"
       description: "Solve the programming puzzle"
-      points: 20
       location: "Lab A"
       
     - id: 3
       name: "Team Challenge"
       description: "Complete the team building activity"
-      points: 15
       location: "Outdoor Area"
       
     - id: 4
       name: "Final Sprint"
       description: "Race to the finish line"
-      points: 25
       location: "Starting Point"
 
 # Admin users (Telegram user IDs)

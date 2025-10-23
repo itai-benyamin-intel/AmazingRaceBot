@@ -34,6 +34,10 @@
 | `/startgame` | Start the game | After teams are formed |
 | `/endgame` | End the game | When time is up |
 | `/reset` | Reset everything | To start fresh |
+| `/teamstatus` | View detailed team info | To monitor progress |
+| `/addteam <name>` | Create a team | To add teams manually |
+| `/editteam <old> <new>` | Rename a team | To fix team names |
+| `/removeteam <name>` | Remove a team | To remove inactive teams |
 
 ## Game Flow
 
@@ -47,14 +51,29 @@
    └─ Admin: Start game (/startgame)
 
 3. PLAY
-   ├─ Teams: Complete challenges in real world
-   ├─ Teams: Submit completions (/submit)
-   └─ Everyone: Check leaderboard (/leaderboard)
+   ├─ Teams: Complete Challenge #1
+   ├─ Teams: Submit (/submit 1)
+   ├─ Challenge #2 unlocks
+   ├─ Teams: Complete Challenge #2
+   └─ Continue sequentially until all done
 
 4. END
    ├─ Admin: End game (/endgame)
-   └─ Winner announced!
+   └─ First team to finish all challenges wins!
 ```
+
+## Important Notes
+
+### Sequential Challenges
+- **Challenges must be completed in order!**
+- Challenge #2 only unlocks after completing Challenge #1
+- Challenge #3 only unlocks after completing Challenge #2
+- And so on...
+
+### Winning
+- **No points system** - it's a race to finish!
+- First team to complete all challenges wins
+- Teams are ranked by finish time
 
 ## Tips
 
@@ -62,13 +81,16 @@
   - Test the bot before the event
   - Have challenges ready in advance
   - Keep admin password/token secure
-  - Monitor the leaderboard during the game
+  - Monitor progress with `/teamstatus`
+  - Use `/editteam` to fix typos in team names
+  - Use `/removeteam` for teams that drop out
 
 - **For Players:**
   - Form your team early
-  - Check `/challenges` to plan your route
-  - Submit challenges as you complete them
-  - Watch the `/leaderboard` to see your position
+  - Check `/challenges` to see your current challenge
+  - Complete challenges in order
+  - Submit each challenge before moving to the next
+  - Watch the `/leaderboard` to see who's ahead
 
 ## Troubleshooting
 
@@ -79,6 +101,8 @@
 | Can't join team | Team might be full or you're already in one |
 | Can't submit | Game might not be started yet |
 | Not authorized | Check you're in admins list for admin commands |
+| Wrong challenge | You must complete challenges in order |
+| Challenge locked | Complete the previous challenge first |
 
 ## Configuration Tips
 
@@ -89,26 +113,25 @@ challenges:
   - id: 1
     name: "Photo Hunt"
     description: "Take a selfie at the landmark"
-    points: 10
     location: "City Center"
     
   - id: 2
     name: "Riddle Master"
     description: "Solve the riddle to find next location"
-    points: 15
     location: "Mystery Location"
     
   - id: 3
     name: "Team Task"
     description: "Build a tower using provided materials"
-    points: 20
     location: "Workshop"
 ```
 
+**Important**: Keep challenge IDs sequential (1, 2, 3, etc.) as teams must complete them in this order.
+
 ### Adjusting Difficulty
 
-- **Easy Game:** Low max_teams, high max_team_size, more points
-- **Hard Game:** Many challenges, strict team size, lower points
+- **Easy Game:** Low max_teams, high max_team_size, fewer challenges
+- **Hard Game:** Many challenges, strict team size, spread out locations
 - **Long Game:** More challenges, spread out locations
 - **Quick Game:** 3-5 challenges, close locations
 
