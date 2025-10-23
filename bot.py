@@ -372,7 +372,7 @@ class AmazingRaceBot:
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def challenges_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /challenges command."""
+        """Handle the /challenges command - shows brief summary of completed and current challenges."""
         user = update.effective_user
         team_name = self.game_state.get_team_by_user(user.id)
         
@@ -387,28 +387,21 @@ class AmazingRaceBot:
         message = "🎯 *Challenges* 🎯\n\n"
         
         for i, challenge in enumerate(self.challenges):
-            challenge_type = challenge.get('type', 'text')
-            type_emoji = self.get_challenge_type_emoji(challenge_type)
-            
             if i < current_challenge_index:
-                # Completed challenge
+                # Completed challenge - show title and brief description only
                 message += (
-                    f"✅ *Challenge #{challenge['id']}: {challenge['name']}*\n"
-                    f"   {type_emoji} Type: {challenge_type}\n"
-                    f"   📍 Location: {challenge['location']}\n"
-                    f"   📝 {challenge['description']}\n\n"
+                    f"✅ *{challenge['name']}*\n"
+                    f"   {challenge['description']}\n\n"
                 )
             elif i == current_challenge_index:
-                # Current challenge (unlocked)
-                instructions = self.get_challenge_instructions(challenge)
+                # Current challenge - show title and brief description only
                 message += (
-                    f"🎯 *Challenge #{challenge['id']}: {challenge['name']}* (CURRENT)\n"
-                    f"   {type_emoji} Type: {challenge_type}\n"
-                    f"   📍 Location: {challenge['location']}\n"
-                    f"   📝 {challenge['description']}\n"
-                    f"   ℹ️ {instructions}\n\n"
+                    f"🎯 *{challenge['name']}* (CURRENT)\n"
+                    f"   {challenge['description']}\n\n"
                 )
             # Locked challenges are not shown anymore
+        
+        message += "Use /current_challenge to see full details of your current challenge."
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
