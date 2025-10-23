@@ -19,8 +19,9 @@ help - Display all available commands
 createteam - Create a new team (usage: /createteam <team_name>)
 jointeam - Join an existing team (usage: /jointeam <team_name>)
 myteam - View your team information and progress
-challenges - View available and unlocked challenges
-submit - Submit a challenge completion (usage: /submit <challenge_id> [answer])
+challenges - View all challenges (sequential)
+current_challenge - View your current challenge
+submit - Submit current challenge (usage: /submit [answer])
 leaderboard - View current team standings
 teams - List all teams
 contact - Contact the bot admin
@@ -48,8 +49,9 @@ help - Display all available commands
 createteam - Create a new team
 jointeam - Join an existing team
 myteam - View your team information and progress
-challenges - View available and unlocked challenges
-submit - Submit a challenge completion
+challenges - View all challenges (sequential)
+current_challenge - View your current challenge
+submit - Submit current challenge
 leaderboard - View current team standings
 teams - List all teams
 contact - Contact the bot admin
