@@ -278,7 +278,7 @@ class AmazingRaceBot:
             "/myteam - View your team info\n"
             "/leaderboard - View current standings\n"
             "/challenges - View challenges\n"
-            "/current_challenge - View your current challenge\n"
+            "/current - View your current challenge\n"
             "/hint - Get a hint (costs 2 min penalty)\n"
             "/submit [answer] - Submit current challenge\n"
             "/contact - Contact the bot admin\n\n"
@@ -302,7 +302,7 @@ class AmazingRaceBot:
             "/myteam - View your team information\n"
             "/leaderboard - View current standings\n"
             "/challenges - View completed and current challenge\n"
-            "/current_challenge - View your current challenge\n"
+            "/current - View your current challenge\n"
             "/hint - Get a hint (costs 2 min penalty)\n"
             "/submit [answer] - Submit current challenge\n"
             "/teams - List all teams\n"
@@ -506,7 +506,7 @@ class AmazingRaceBot:
             message += "⏱️ Your current challenge is locked due to hint penalty.\n"
             message += f"It will unlock at {penalty_info['unlock_time'].strftime('%H:%M:%S')}.\n\n"
         
-        message += "Use /current_challenge to see full details of your current challenge.\n"
+        message += "Use /current to see full details of your current challenge.\n"
         message += "Use /submit [answer] to submit your answers."
         
         await update.message.reply_text(message, parse_mode='Markdown')
@@ -1633,6 +1633,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("leaderboard", self.leaderboard_command))
         application.add_handler(CommandHandler("challenges", self.challenges_command))
         application.add_handler(CommandHandler("current_challenge", self.current_challenge_command))
+        application.add_handler(CommandHandler("current", self.current_challenge_command))
         application.add_handler(CommandHandler("hint", self.hint_command))
         application.add_handler(CommandHandler("submit", self.submit_command))
         application.add_handler(CommandHandler("contact", self.contact_command))

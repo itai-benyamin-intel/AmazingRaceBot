@@ -120,7 +120,7 @@ The bot will start and be ready to receive commands!
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
 - `/challenges` - View completed challenges and your current challenge
-- `/current_challenge` - View your current challenge (shows available/used hints)
+- `/current` - View your current challenge (shows available/used hints)
 - `/hint` - Request a hint for the current challenge (costs 2 min penalty)
 - `/submit [answer]` - Submit current challenge
   - For photo challenges: `/submit` then send a photo
@@ -188,7 +188,7 @@ The bot will:
 - Broadcast the hint to all team members
 
 **Viewing hints:**
-- `/current_challenge` - Shows how many hints are available and which ones you've used
+- `/current` - Shows how many hints are available and which ones you've used
 - `/hint` - Shows previously used hints and allows requesting the next one
 
 **Penalty timing:**

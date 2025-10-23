@@ -113,8 +113,8 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("🔒", message)
         self.assertNotIn("LOCKED", message)
         
-        # Verify hint about /current_challenge is shown
-        self.assertIn("Use /current_challenge", message)
+        # Verify hint about /current is shown
+        self.assertIn("Use /current", message)
         
         # Verify hint about /submit is shown
         self.assertIn("Use /submit", message)
