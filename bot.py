@@ -408,31 +408,52 @@ class AmazingRaceBot:
         await update.message.reply_text(welcome_message)
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /help command."""
-        help_text = (
-            "📋 *Available Commands:*\n\n"
-            "*Player Commands:*\n"
-            "/start - Show welcome message\n"
-            "/createteam <name> - Create a new team\n"
-            "/jointeam <name> - Join an existing team\n"
-            "/myteam - View your team information\n"
-            "/leaderboard - View current standings\n"
-            "/challenges - View completed and current challenge\n"
-            "/current - View your current challenge\n"
-            "/hint - Get a hint (costs 2 min penalty)\n"
-            "/submit [answer] - Submit current challenge\n"
-            "/teams - List all teams\n"
-            "/contact - Contact the bot admin\n\n"
-            "*Admin Commands:*\n"
-            "/startgame - Start the game\n"
-            "/endgame - End the game\n"
-            "/reset - Reset all game data\n"
-            "/teamstatus - View detailed team status\n"
-            "/addteam <name> - Create a team (admin)\n"
-            "/editteam <old> <new> - Rename a team\n"
-            "/removeteam <name> - Remove a team\n"
-            "/togglelocation - Toggle location verification on/off\n"
-        )
+        """Handle the /help command with context-aware messages."""
+        user = update.effective_user
+        team_name = self.game_state.get_team_by_user(user.id)
+        
+        # Check player state and provide context-aware help
+        if not team_name:
+            # Player has no team
+            help_text = (
+                "👋 *Welcome to the Amazing Race!*\n\n"
+                "You're not part of a team yet. Here's how to get started:\n\n"
+                "🆕 *Create a new team:*\n"
+                "Use `/createteam <team_name>` to create a team\n"
+                "Example: `/createteam Awesome Team`\n\n"
+                "👥 *Join an existing team:*\n"
+                "Use `/jointeam <team_name>` to join a team\n"
+                "Example: `/jointeam Awesome Team`\n\n"
+                "📋 You can also use the menu button below to see all available commands."
+            )
+        elif not self.game_state.game_started:
+            # Player has team but game hasn't started
+            help_text = (
+                "⏳ *Waiting for Game to Start*\n\n"
+                "You're all set! Your team is ready to go.\n\n"
+                "The game will begin once the admin starts it.\n"
+                "While you wait, you can:\n\n"
+                "👥 `/myteam` - View your team members\n"
+                "🏆 `/leaderboard` - See all registered teams\n\n"
+                "📋 Use the menu button below to see all available commands."
+            )
+        else:
+            # Game has started
+            help_text = (
+                "🎯 *How to Play*\n\n"
+                "The game is in progress! Here's how to navigate:\n\n"
+                "📍 *View your current challenge:*\n"
+                "Use `/current` to see details of your current challenge\n\n"
+                "📊 *Check your progress:*\n"
+                "Use `/challenges` to see completed and current challenges\n\n"
+                "✅ *Submit your answer:*\n"
+                "Use `/submit [answer]` for text answers\n"
+                "Use `/submit` for photo challenges\n\n"
+                "💡 *Need help?*\n"
+                "Use `/hint` to get a hint (costs 2 min penalty)\n\n"
+                "📋 Use the menu button below to see all available commands."
+            )
+        
         await update.message.reply_text(help_text, parse_mode='Markdown')
     
     async def create_team_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1748,6 +1769,23 @@ class AmazingRaceBot:
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
+    async def unrecognized_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle unrecognized text messages."""
+        # Only handle text messages that aren't commands
+        if not update.message or not update.message.text:
+            return
+        
+        # Ignore if this is a command (starts with /)
+        if update.message.text.startswith('/'):
+            return
+        
+        # Send helpful message
+        response = (
+            "❓ I didn't understand that message.\n\n"
+            "Use /help to see what you can do based on your current game state."
+        )
+        
+        await update.message.reply_text(response)
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -1798,6 +1836,9 @@ class AmazingRaceBot:
         
         # Add location handler for location verification
         application.add_handler(MessageHandler(filters.LOCATION, self.location_handler))
+        
+        # Add handler for unrecognized text messages (must be last)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unrecognized_message_handler))
         
         # Add error handler
         application.add_error_handler(self.error_handler)

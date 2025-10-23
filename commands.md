@@ -15,7 +15,7 @@ Use this to set up the bot's command menu by sending these commands to @BotFathe
 ### Player Commands
 ```
 start - Show welcome message and get started
-help - Display all available commands
+help - Get help based on your current game state
 createteam - Create a new team (usage: /createteam <team_name>)
 jointeam - Join an existing team (usage: /jointeam <team_name>)
 myteam - View your team information and progress
@@ -46,7 +46,7 @@ Copy everything below this line and paste it to BotFather when asked:
 
 ```
 start - Show welcome message and get started
-help - Display all available commands
+help - Get help based on your current game state
 createteam - Create a new team
 jointeam - Join an existing team
 myteam - View your team information and progress
@@ -72,4 +72,6 @@ togglelocation - Toggle location verification (admin only)
 - Commands marked with "(admin only)" are restricted to the configured admin user
 - Player commands are available to all users
 - Some commands require parameters - use `/help` in the bot for detailed usage information
+- The `/help` command now provides context-aware guidance based on your current game state
 - The bot menu in Telegram will display these commands when users type `/` in the chat
+- If you send a message that the bot doesn't recognize, it will direct you to use `/help`

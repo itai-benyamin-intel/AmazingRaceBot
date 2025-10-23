@@ -115,7 +115,7 @@ The bot will start and be ready to receive commands!
 ### Player Commands
 
 - `/start` - Show welcome message and available commands
-- `/help` - Display all available commands
+- `/help` - Get context-aware help based on your current game state
 - `/createteam <team_name>` - Create a new team (you become the captain)
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
