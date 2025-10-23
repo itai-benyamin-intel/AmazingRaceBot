@@ -6,6 +6,7 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 
 - 🏁 **Team Management**: Create and join teams
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
+- 💡 **Hints System**: Teams can request up to 3 hints per challenge with time penalties
 - 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
 - 📍 **Location-Based Verification**: Optional GPS-based verification for physical challenge locations
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
@@ -119,7 +120,8 @@ The bot will start and be ready to receive commands!
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
 - `/challenges` - View completed challenges and your current challenge
-- `/current_challenge` - View your current challenge
+- `/current_challenge` - View your current challenge (shows available/used hints)
+- `/hint` - Request a hint for the current challenge (costs 2 min penalty)
 - `/submit [answer]` - Submit current challenge
   - For photo challenges: `/submit` then send a photo
   - For answer challenges: `/submit <your answer>`
@@ -155,6 +157,74 @@ The bot will start and be ready to receive commands!
    - Admin ends the game with `/endgame`
    - Final leaderboard is displayed
    - Winner is the team that finished first!
+
+## Hints System
+
+The bot supports an optional hints system that allows teams to request help when stuck on a challenge. Each hint comes with a time penalty that delays the next challenge.
+
+### How It Works
+
+1. **Hints Configuration**: Each challenge can have up to 3 hints defined in `config.yml`
+2. **Requesting Hints**: Teams use `/hint` to request the next available hint
+3. **Confirmation**: Bot asks for confirmation, warning about the 2-minute penalty
+4. **Team Broadcast**: When approved, the hint is sent to all team members
+5. **Penalty Applied**: When the challenge is completed, a timer delays the next challenge unlock
+6. **Maximum Penalty**: With 3 hints used, teams wait 6 minutes before the next challenge
+
+### For Teams
+
+**To request a hint:**
+```
+/hint
+```
+
+The bot will:
+- Show any previously used hints
+- Ask for confirmation (warns about 2-minute penalty)
+- Display current penalty time
+- Reveal the hint when confirmed
+- Broadcast the hint to all team members
+
+**Viewing hints:**
+- `/current_challenge` - Shows how many hints are available and which ones you've used
+- `/hint` - Shows previously used hints and allows requesting the next one
+
+**Penalty timing:**
+When you complete a challenge after using hints, the next challenge will be locked for 2 minutes per hint used. For example:
+- 1 hint used = 2 minutes wait
+- 2 hints used = 4 minutes wait
+- 3 hints used = 6 minutes wait (maximum)
+
+### For Admins
+
+**Configure Hints in config.yml:**
+```yaml
+challenges:
+  - id: 1
+    name: "Find the Landmark"
+    description: "Take a team photo with the city skyline"
+    location: "Downtown Viewpoint"
+    type: "photo"
+    verification:
+      method: "photo"
+    hints:
+      - "Look for the tallest building in the area"
+      - "The viewpoint is near the waterfront"
+      - "Check the tourist information center for directions"
+```
+
+**Hints are optional:**
+- Challenges without hints will show "No hints available" when teams use `/hint`
+- You can provide 1, 2, or 3 hints per challenge
+- Each hint costs 2 minutes penalty when the next challenge is unlocked
+
+### Hint Strategy
+
+Teams should consider:
+- **When to use hints**: Balance speed vs. getting stuck
+- **Team coordination**: Any team member can request a hint (all members are notified)
+- **Penalty impact**: 6 minutes total penalty can be significant in a close race
+- **Progressive difficulty**: Hints are revealed one at a time (can't skip to the last hint)
 
 ## Location-Based Verification
 
@@ -225,6 +295,10 @@ game:
       type: "photo"  # Challenge type (photo, riddle, code, qr, trivia, etc.)
       verification:
         method: "photo"  # Verification method (photo or answer)
+      hints:  # Optional: up to 3 hints per challenge
+        - "First hint (easier)"
+        - "Second hint (more specific)"
+        - "Third hint (almost gives it away)"
     
     - id: 2
       name: "Riddle Challenge"
@@ -234,6 +308,9 @@ game:
       verification:
         method: "answer"
         answer: "keyboard"  # Expected answer (case-insensitive)
+      hints:
+        - "Think about what you're using right now"
+        - "It's used for typing"
     
     - id: 3
       name: "Trivia Challenge"
@@ -243,6 +320,7 @@ game:
       verification:
         method: "answer"
         answer: "python, java, javascript"  # Comma-separated for multiple keywords
+      # No hints - this challenge is optional without hints
 ```
 
 ### Challenge Configuration Fields
@@ -255,6 +333,10 @@ game:
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
   - **answer**: (for answer method) Expected answer or comma-separated keywords
+- **hints**: (optional) List of up to 3 hints for the challenge
+  - Each hint costs 2 minutes penalty (max 6 minutes total)
+  - Hints are revealed sequentially (one at a time)
+  - Teams can request hints using `/hint`
 - **coordinates**: (optional) GPS coordinates for location verification
   - **latitude**: Latitude coordinate (-90 to 90)
   - **longitude**: Longitude coordinate (-180 to 180)
