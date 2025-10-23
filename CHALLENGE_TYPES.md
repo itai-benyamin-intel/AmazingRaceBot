@@ -27,8 +27,10 @@ Teams take photos of specified objects, landmarks, or complete specific scenes.
 - Teams use `/submit 1` to initiate submission
 - Bot prompts them to send a photo
 - Teams send the photo via Telegram
-- Photo is automatically accepted and challenge is marked complete
-- Admin receives a copy of the photo for verification
+- Photo is sent to admin for approval
+- Admin approves or rejects using inline buttons
+- Challenge is marked complete after admin approval
+- Team is notified of approval/rejection
 
 **Use cases:**
 - Team photos at specific locations
@@ -248,9 +250,10 @@ verification:
 ```
 
 - Teams submit photos via Telegram
-- Photos are automatically accepted
-- Admin receives notification with the photo
-- Challenge is immediately marked as complete
+- Photos are sent to admin for approval
+- Admin receives photo with approve/reject buttons
+- Challenge is marked complete after admin approval
+- Team members are notified of approval/rejection
 
 ### Answer Verification
 
@@ -292,7 +295,8 @@ verification:
 1. **Specific requirements**: Be clear about what should be in the photo
 2. **Safe locations**: Ensure photo locations are safe and accessible
 3. **Legal considerations**: Ensure photos don't violate privacy or property rules
-4. **Admin review**: Even though photos are auto-accepted, admins receive copies for review
+4. **Admin approval**: Admins must approve all photo submissions before challenges are marked complete
+5. **Timely review**: Admins should review and approve/reject photos promptly to keep the game flowing
 
 ## Example Challenge Set
 
