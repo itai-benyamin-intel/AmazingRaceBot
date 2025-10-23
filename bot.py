@@ -578,13 +578,37 @@ class AmazingRaceBot:
             return
         
         self.game_state.start_game()
-        await update.message.reply_text(
+        
+        # Prepare the game started message
+        game_start_message = (
             "🏁 *THE GAME HAS STARTED!* 🏁\n\n"
             "Teams can now start completing challenges!\n"
             "Use /challenges to see available challenges.\n"
-            "Good luck! 🎯",
-            parse_mode='Markdown'
+            "Good luck! 🎯"
         )
+        
+        # Send message to admin
+        await update.message.reply_text(game_start_message, parse_mode='Markdown')
+        
+        # Broadcast message to all team members
+        sent_to_users = set()  # Track users to avoid duplicate messages
+        for team_name, team_data in self.game_state.teams.items():
+            for member in team_data['members']:
+                user_id = member['id']
+                # Skip if already sent (e.g., admin is also a team member)
+                if user_id in sent_to_users or user_id == user.id:
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=game_start_message,
+                        parse_mode='Markdown'
+                    )
+                    sent_to_users.add(user_id)
+                except Exception as e:
+                    logger.error(f"Failed to send game start message to user {user_id}: {e}")
+                    # Continue sending to other users even if one fails
     
     async def end_game_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /endgame command (admin only)."""
