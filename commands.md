@@ -20,7 +20,7 @@ createteam - Create a new team (usage: /createteam <team_name>)
 jointeam - Join an existing team (usage: /jointeam <team_name>)
 myteam - View your team information and progress
 challenges - View completed and current challenge
-current_challenge - View your current challenge
+current - View your current challenge
 hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge (usage: /submit [answer])
 leaderboard - View current team standings
@@ -51,7 +51,7 @@ createteam - Create a new team
 jointeam - Join an existing team
 myteam - View your team information and progress
 challenges - View completed and current challenge
-current_challenge - View your current challenge
+current - View your current challenge
 hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge
 leaderboard - View current team standings
