@@ -135,7 +135,6 @@ The bot will start and be ready to receive commands!
 - `/addteam <name>` - Create a team as admin
 - `/editteam <old_name> <new_name>` - Rename a team
 - `/removeteam <name>` - Remove a team
-- `/setlocation <challenge_id> <latitude> <longitude> [radius]` - Set GPS coordinates for a challenge
 - `/togglelocation` - Enable/disable location-based verification globally
 
 ## Game Flow
@@ -185,17 +184,7 @@ To share your location:
 ```
 This enables or disables location verification for all challenges (except Challenge 1).
 
-**Set Challenge Coordinates:**
-```
-/setlocation <challenge_id> <latitude> <longitude> [radius]
-```
-Example:
-```
-/setlocation 2 37.7749 -122.4194 150
-```
-This sets Challenge 2's location to the specified GPS coordinates with a 150-meter verification radius.
-
-**Configure in config.yml:**
+**Configure Challenge Coordinates in config.yml:**
 ```yaml
 game:
   location_verification_enabled: true  # Enable on startup

@@ -221,7 +221,6 @@ class AmazingRaceBot:
             "/startgame - Start the game\n"
             "/endgame - End the game\n"
             "/reset - Reset the game\n"
-            "/setlocation - Set challenge location (admin)\n"
             "/togglelocation - Toggle location verification (admin)\n\n"
             "Good luck! 🎯"
         )
@@ -249,7 +248,6 @@ class AmazingRaceBot:
             "/addteam <name> - Create a team (admin)\n"
             "/editteam <old> <new> - Rename a team\n"
             "/removeteam <name> - Remove a team\n"
-            "/setlocation <id> <lat> <lon> [radius] - Set challenge location\n"
             "/togglelocation - Toggle location verification on/off\n"
         )
         await update.message.reply_text(help_text, parse_mode='Markdown')
@@ -968,65 +966,7 @@ class AmazingRaceBot:
             "This command is reserved for future manual verification features."
         )
     
-    async def setlocation_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /setlocation command (admin only) - set coordinates for a challenge."""
-        user = update.effective_user
-        if not self.is_admin(user.id):
-            await update.message.reply_text("Only admins can set challenge locations!")
-            return
-        
-        if len(context.args) < 3:
-            await update.message.reply_text(
-                "Usage: /setlocation <challenge_id> <latitude> <longitude> [radius]\n"
-                "Example: /setlocation 2 37.7749 -122.4194 100\n\n"
-                "Note: This updates the runtime configuration, not the config.yml file."
-            )
-            return
-        
-        try:
-            challenge_id = int(context.args[0])
-            latitude = float(context.args[1])
-            longitude = float(context.args[2])
-            radius = int(context.args[3]) if len(context.args) > 3 else 100
-            
-            # Validate latitude and longitude ranges
-            if not (-90 <= latitude <= 90):
-                await update.message.reply_text("❌ Invalid latitude! Must be between -90 and 90.")
-                return
-            
-            if not (-180 <= longitude <= 180):
-                await update.message.reply_text("❌ Invalid longitude! Must be between -180 and 180.")
-                return
-            
-            if radius <= 0:
-                await update.message.reply_text("❌ Invalid radius! Must be greater than 0.")
-                return
-            
-            # Find the challenge
-            challenge = next((c for c in self.challenges if c['id'] == challenge_id), None)
-            if not challenge:
-                await update.message.reply_text(f"❌ Challenge #{challenge_id} not found!")
-                return
-            
-            # Update challenge coordinates
-            if 'coordinates' not in challenge:
-                challenge['coordinates'] = {}
-            
-            challenge['coordinates']['latitude'] = latitude
-            challenge['coordinates']['longitude'] = longitude
-            challenge['coordinates']['radius'] = radius
-            
-            await update.message.reply_text(
-                f"✅ Location set for Challenge #{challenge_id}: {challenge['name']}\n"
-                f"📍 Coordinates: {latitude}, {longitude}\n"
-                f"📏 Radius: {radius}m\n\n"
-                f"⚠️ Note: This is a runtime change and will be lost if the bot restarts.\n"
-                f"To make it permanent, update config.yml"
-            )
-        
-        except ValueError:
-            await update.message.reply_text("❌ Invalid input! Please provide valid numbers.")
-    
+
     async def togglelocation_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /togglelocation command (admin only) - toggle location verification."""
         user = update.effective_user
@@ -1088,7 +1028,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("removeteam", self.removeteam_command))
         application.add_handler(CommandHandler("approve", self.approve_command))
         application.add_handler(CommandHandler("reject", self.reject_command))
-        application.add_handler(CommandHandler("setlocation", self.setlocation_command))
+
         application.add_handler(CommandHandler("togglelocation", self.togglelocation_command))
         
         # Add photo handler for photo submissions

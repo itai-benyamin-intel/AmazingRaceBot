@@ -35,7 +35,6 @@ teamstatus - View detailed status of all teams (admin only)
 addteam - Create a team as admin (usage: /addteam <name>)
 editteam - Rename a team (usage: /editteam <old_name> <new_name>)
 removeteam - Remove a team (usage: /removeteam <name>)
-setlocation - Set GPS coordinates for a challenge (usage: /setlocation <id> <lat> <lon> [radius])
 togglelocation - Toggle location verification on/off (admin only)
 ```
 
@@ -61,7 +60,6 @@ teamstatus - View detailed team status (admin only)
 addteam - Create a team (admin only)
 editteam - Rename a team (admin only)
 removeteam - Remove a team (admin only)
-setlocation - Set challenge location (admin only)
 togglelocation - Toggle location verification (admin only)
 ```
 
