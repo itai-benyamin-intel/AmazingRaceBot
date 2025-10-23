@@ -216,6 +216,7 @@ class AmazingRaceBot:
             "/leaderboard - View current standings\n"
             "/challenges - View challenges\n"
             "/current_challenge - View your current challenge\n"
+            "/hint - Get a hint (costs 2 min penalty)\n"
             "/submit [answer] - Submit current challenge\n"
             "/contact - Contact the bot admin\n\n"
             "Admin commands:\n"
@@ -239,6 +240,7 @@ class AmazingRaceBot:
             "/leaderboard - View current standings\n"
             "/challenges - View completed and current challenge\n"
             "/current_challenge - View your current challenge\n"
+            "/hint - Get a hint (costs 2 min penalty)\n"
             "/submit [answer] - Submit current challenge\n"
             "/teams - List all teams\n"
             "/contact - Contact the bot admin\n\n"
@@ -439,10 +441,203 @@ class AmazingRaceBot:
             f"📍 Location: {challenge['location']}\n"
             f"📝 {challenge['description']}\n\n"
             f"ℹ️ {instructions}\n\n"
-            f"Use /submit [answer] to submit this challenge."
         )
         
+        # Add hints information
+        hints = challenge.get('hints', [])
+        used_hints = self.game_state.get_used_hints(team_name, challenge['id'])
+        
+        if hints:
+            message += f"💡 Hints available: {len(hints)}\n"
+            message += f"💡 Hints used: {len(used_hints)}/{len(hints)}\n"
+            
+            if used_hints:
+                message += "\n*Used Hints:*\n"
+                for hint_record in used_hints:
+                    hint_idx = hint_record['hint_index']
+                    if hint_idx < len(hints):
+                        message += f"  • {hints[hint_idx]}\n"
+            
+            if len(used_hints) < len(hints):
+                message += "\nUse /hint to get a hint (costs 2 min penalty)\n"
+        
+        message += "\nUse /submit [answer] to submit this challenge."
+        
         await update.message.reply_text(message, parse_mode='Markdown')
+    
+    async def hint_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /hint command."""
+        user = update.effective_user
+        team_name = self.game_state.get_team_by_user(user.id)
+        
+        if not team_name:
+            await update.message.reply_text("You are not in any team yet! Use /createteam or /jointeam")
+            return
+        
+        team = self.game_state.teams[team_name]
+        current_challenge_index = team.get('current_challenge_index', 0)
+        
+        # Check if all challenges are completed
+        if current_challenge_index >= len(self.challenges):
+            await update.message.reply_text("🏆 Your team has completed all challenges!")
+            return
+        
+        # Get current challenge
+        challenge = self.challenges[current_challenge_index]
+        hints = challenge.get('hints', [])
+        
+        # Check if challenge has hints
+        if not hints:
+            await update.message.reply_text(
+                "💡 No hints are available for this challenge.\n"
+                "Good luck! 🍀"
+            )
+            return
+        
+        # Get used hints
+        used_hints = self.game_state.get_used_hints(team_name, challenge['id'])
+        
+        # Check if all hints are used
+        if len(used_hints) >= len(hints):
+            message = "💡 All hints have been used for this challenge:\n\n"
+            for i, hint in enumerate(hints):
+                message += f"{i+1}. {hint}\n"
+            await update.message.reply_text(message)
+            return
+        
+        # Display used hints if any
+        if used_hints:
+            message = "*Previously Used Hints:*\n"
+            for hint_record in used_hints:
+                hint_idx = hint_record['hint_index']
+                if hint_idx < len(hints):
+                    message += f"  • {hints[hint_idx]}\n"
+            message += "\n"
+        else:
+            message = ""
+        
+        # Ask for confirmation to use next hint
+        next_hint_index = len(used_hints)
+        hints_remaining = len(hints) - len(used_hints)
+        
+        message += (
+            f"⚠️ *Hint Confirmation*\n\n"
+            f"Using a hint will cost your team a *2-minute penalty*.\n"
+            f"The penalty is applied when the next challenge is unlocked.\n\n"
+            f"Hints remaining: {hints_remaining}/{len(hints)}\n"
+            f"Current penalty: {len(used_hints) * 2} minutes\n"
+            f"Penalty if you use this hint: {(len(used_hints) + 1) * 2} minutes\n\n"
+            f"Do you want to use a hint?"
+        )
+        
+        # Create inline keyboard for confirmation
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Yes, use hint", callback_data=f"hint_yes_{challenge['id']}_{next_hint_index}"),
+                InlineKeyboardButton("❌ No, cancel", callback_data="hint_no")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+    
+    async def hint_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle hint confirmation callbacks."""
+        query = update.callback_query
+        await query.answer()
+        
+        user = update.effective_user
+        team_name = self.game_state.get_team_by_user(user.id)
+        
+        if not team_name:
+            await query.edit_message_text("You are not in any team!")
+            return
+        
+        # Parse callback data
+        callback_data = query.data
+        
+        if callback_data == "hint_no":
+            await query.edit_message_text("❌ Hint request cancelled.")
+            return
+        
+        # Parse hint confirmation: hint_yes_{challenge_id}_{hint_index}
+        parts = callback_data.split('_')
+        if len(parts) != 4 or parts[0] != 'hint' or parts[1] != 'yes':
+            await query.edit_message_text("Invalid request.")
+            return
+        
+        challenge_id = int(parts[2])
+        hint_index = int(parts[3])
+        
+        # Verify this is still the current challenge
+        team = self.game_state.teams[team_name]
+        current_challenge_index = team.get('current_challenge_index', 0)
+        current_challenge = self.challenges[current_challenge_index]
+        
+        if current_challenge['id'] != challenge_id:
+            await query.edit_message_text(
+                "❌ This hint is for a different challenge. Your team has moved on!"
+            )
+            return
+        
+        # Get hints for the challenge
+        hints = current_challenge.get('hints', [])
+        
+        # Verify hint index is valid
+        if hint_index >= len(hints):
+            await query.edit_message_text("❌ Invalid hint request.")
+            return
+        
+        # Verify this hint hasn't been used already
+        used_hints = self.game_state.get_used_hints(team_name, challenge_id)
+        if any(h['hint_index'] == hint_index for h in used_hints):
+            await query.edit_message_text("❌ This hint has already been used.")
+            return
+        
+        # Record hint usage
+        self.game_state.use_hint(team_name, challenge_id, hint_index, user.id, user.first_name)
+        
+        # Get the hint text
+        hint_text = hints[hint_index]
+        
+        # Calculate updated penalty
+        total_hints_used = len(used_hints) + 1
+        total_penalty = total_hints_used * 2
+        
+        # Edit the confirmation message
+        await query.edit_message_text(
+            f"✅ Hint revealed! (Penalty: {total_penalty} minutes)\n\n"
+            f"💡 *Hint:* {hint_text}",
+            parse_mode='Markdown'
+        )
+        
+        # Broadcast hint to all team members
+        team_data = self.game_state.teams[team_name]
+        broadcast_message = (
+            f"💡 *Hint Revealed for Challenge #{challenge_id}*\n\n"
+            f"Requested by: {user.first_name}\n"
+            f"Challenge: {current_challenge['name']}\n\n"
+            f"*Hint:* {hint_text}\n\n"
+            f"⏱️ Penalty: {total_penalty} minutes total"
+        )
+        
+        sent_to_users = set()
+        for member in team_data['members']:
+            member_id = member['id']
+            # Skip the user who requested (they already got the message)
+            if member_id == user.id or member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=broadcast_message,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+            except Exception as e:
+                logger.error(f"Failed to send hint broadcast to user {member_id}: {e}")
+
     
     async def submit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /submit command."""
@@ -473,6 +668,34 @@ class AmazingRaceBot:
         
         challenge = self.challenges[current_challenge_index]
         challenge_id = challenge['id']
+        
+        # Check if challenge is still locked due to penalty
+        if current_challenge_index > 0:  # Not the first challenge
+            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+            if unlock_time_str:
+                from datetime import datetime
+                unlock_time = datetime.fromisoformat(unlock_time_str)
+                now = datetime.now()
+                
+                if now < unlock_time:
+                    # Challenge is still locked
+                    time_remaining = unlock_time - now
+                    minutes = int(time_remaining.total_seconds() // 60)
+                    seconds = int(time_remaining.total_seconds() % 60)
+                    
+                    previous_challenge_id = challenge_id - 1
+                    hint_count = self.game_state.get_hint_count(team_name, previous_challenge_id)
+                    
+                    await update.message.reply_text(
+                        f"⏱️ *Challenge Locked - Penalty Timer*\n\n"
+                        f"Your team used {hint_count} hint(s) on the previous challenge.\n"
+                        f"You must wait before this challenge is unlocked.\n\n"
+                        f"⏳ Time remaining: {minutes}m {seconds}s\n\n"
+                        f"The challenge will be available at:\n"
+                        f"{unlock_time.strftime('%H:%M:%S')}",
+                        parse_mode='Markdown'
+                    )
+                    return
         
         # Check location verification for challenges 2 onwards (if enabled)
         if self.game_state.location_verification_enabled and challenge_id > 1:
@@ -534,6 +757,22 @@ class AmazingRaceBot:
                         response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
                         response += f"Your team finished the race!\n"
                         response += f"Finish time: {team['finish_time']}"
+                    else:
+                        # Check if there's a penalty for the next challenge
+                        next_challenge_id = challenge_id + 1
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                        if unlock_time_str:
+                            from datetime import datetime
+                            unlock_time = datetime.fromisoformat(unlock_time_str)
+                            hint_count = self.game_state.get_hint_count(team_name, challenge_id)
+                            penalty_minutes = hint_count * 2
+                            
+                            response += (
+                                f"\n\n⏱️ *Hint Penalty Applied*\n"
+                                f"You used {hint_count} hint(s) on this challenge.\n"
+                                f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
+                                f"{unlock_time.strftime('%H:%M:%S')}"
+                            )
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
                 else:
@@ -875,6 +1114,22 @@ class AmazingRaceBot:
                 response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
                 response += f"Your team finished the race!\n"
                 response += f"Finish time: {team['finish_time']}"
+            else:
+                # Check if there's a penalty for the next challenge
+                next_challenge_id = challenge_id + 1
+                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                if unlock_time_str:
+                    from datetime import datetime
+                    unlock_time = datetime.fromisoformat(unlock_time_str)
+                    hint_count = self.game_state.get_hint_count(team_name, challenge_id)
+                    penalty_minutes = hint_count * 2
+                    
+                    response += (
+                        f"\n\n⏱️ *Hint Penalty Applied*\n"
+                        f"You used {hint_count} hint(s) on this challenge.\n"
+                        f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
+                        f"{unlock_time.strftime('%H:%M:%S')}"
+                    )
             
             await update.message.reply_text(response, parse_mode='Markdown')
             
@@ -1069,6 +1324,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("leaderboard", self.leaderboard_command))
         application.add_handler(CommandHandler("challenges", self.challenges_command))
         application.add_handler(CommandHandler("current_challenge", self.current_challenge_command))
+        application.add_handler(CommandHandler("hint", self.hint_command))
         application.add_handler(CommandHandler("submit", self.submit_command))
         application.add_handler(CommandHandler("contact", self.contact_command))
         application.add_handler(CommandHandler("startgame", self.start_game_command))
@@ -1083,6 +1339,9 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("reject", self.reject_command))
 
         application.add_handler(CommandHandler("togglelocation", self.togglelocation_command))
+        
+        # Add callback query handler for hint confirmations
+        application.add_handler(CallbackQueryHandler(self.hint_callback_handler))
         
         # Add photo handler for photo submissions
         application.add_handler(MessageHandler(filters.PHOTO, self.photo_handler))
