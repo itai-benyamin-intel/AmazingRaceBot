@@ -19,7 +19,7 @@ help - Display all available commands
 createteam - Create a new team (usage: /createteam <team_name>)
 jointeam - Join an existing team (usage: /jointeam <team_name>)
 myteam - View your team information and progress
-challenges - View all challenges (sequential)
+challenges - View completed and current challenge
 current_challenge - View your current challenge
 submit - Submit current challenge (usage: /submit [answer])
 leaderboard - View current team standings
@@ -49,7 +49,7 @@ help - Display all available commands
 createteam - Create a new team
 jointeam - Join an existing team
 myteam - View your team information and progress
-challenges - View all challenges (sequential)
+challenges - View completed and current challenge
 current_challenge - View your current challenge
 submit - Submit current challenge
 leaderboard - View current team standings
