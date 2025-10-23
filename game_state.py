@@ -16,6 +16,7 @@ class GameState:
         self.challenges: Dict[int, Dict] = {}
         self.game_started: bool = False
         self.game_ended: bool = False
+        self.location_verification_enabled: bool = False
         self.load_state()
     
     def load_state(self):
@@ -28,6 +29,7 @@ class GameState:
                     self.challenges = data.get('challenges', {})
                     self.game_started = data.get('game_started', False)
                     self.game_ended = data.get('game_ended', False)
+                    self.location_verification_enabled = data.get('location_verification_enabled', False)
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -38,7 +40,8 @@ class GameState:
                 'teams': self.teams,
                 'challenges': self.challenges,
                 'game_started': self.game_started,
-                'game_ended': self.game_ended
+                'game_ended': self.game_ended,
+                'location_verification_enabled': self.location_verification_enabled
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -167,6 +170,7 @@ class GameState:
         self.challenges = {}
         self.game_started = False
         self.game_ended = False
+        self.location_verification_enabled = False
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 
@@ -247,3 +251,22 @@ class GameState:
         
         self.save_state()
         return True
+    
+    def toggle_location_verification(self) -> bool:
+        """Toggle location verification on/off.
+        
+        Returns:
+            New state of location verification (True if enabled, False if disabled)
+        """
+        self.location_verification_enabled = not self.location_verification_enabled
+        self.save_state()
+        return self.location_verification_enabled
+    
+    def set_location_verification(self, enabled: bool) -> None:
+        """Set location verification state.
+        
+        Args:
+            enabled: True to enable, False to disable
+        """
+        self.location_verification_enabled = enabled
+        self.save_state()
