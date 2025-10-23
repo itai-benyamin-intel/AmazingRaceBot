@@ -11,26 +11,93 @@ game:
   # Challenge definitions
   # Note: Challenges are completed sequentially - teams must complete
   # challenge 1 before they can attempt challenge 2, and so on.
+  # 
+  # Challenge Types:
+  # - photo: Teams submit photos (e.g., team photo at location, completed puzzle)
+  # - riddle: Teams solve riddles/puzzles and submit text answer
+  # - code: Teams write/debug code and submit solution
+  # - qr: Teams find and scan QR codes (auto-verified)
+  # - trivia: Teams answer trivia questions
+  # - location: Teams visit specific GPS locations
+  # - text: General text submission challenge
+  # - scavenger: Teams find and document items (via photos)
+  # - team_activity: Teams perform activities (verified by photo/video)
+  # - decryption: Teams decrypt encoded messages
+  #
+  # Verification Methods:
+  # - answer: Text answer that must match (case-insensitive, trimmed)
+  # - photo: Requires photo submission (manual admin verification)
+  # - location: GPS coordinates verification (latitude, longitude, radius in meters)
+  # - auto: Automatically verified (e.g., QR code scan)
   challenges:
     - id: 1
-      name: "First Challenge"
-      description: "Find the hidden clue in the main hall"
-      location: "Main Hall"
+      name: "Find the Landmark"
+      description: "Take a team photo with the city skyline in the background"
+      location: "Downtown Viewpoint"
+      type: "photo"
+      verification:
+        method: "photo"
       
     - id: 2
-      name: "Code Puzzle"
-      description: "Solve the programming puzzle"
-      location: "Lab A"
+      name: "Riddle Master"
+      description: "I stand tall where knowledge flows, students gather in my shadow's throes. What am I?"
+      location: "Campus"
+      type: "riddle"
+      verification:
+        method: "answer"
+        answer: "library"
       
     - id: 3
-      name: "Team Challenge"
-      description: "Complete the team building activity"
-      location: "Outdoor Area"
+      name: "Code Debug"
+      description: "Fix this function to correctly calculate Fibonacci numbers. Submit the corrected function."
+      location: "Lab A"
+      type: "code"
+      verification:
+        method: "answer"
+        answer: "fibonacci"  # Keyword to check in submission
       
     - id: 4
-      name: "Final Sprint"
-      description: "Race to the finish line"
-      location: "Starting Point"
+      name: "QR Hunt"
+      description: "Find the QR code hidden near the water fountain"
+      location: "Main Courtyard"
+      type: "qr"
+      verification:
+        method: "answer"
+        answer: "FOUNTAIN_2024"  # QR code contains this text
+      
+    - id: 5
+      name: "Tech Trivia"
+      description: "Name three inventors who contributed to the development of the modern computer (comma-separated)"
+      location: "Anywhere"
+      type: "trivia"
+      verification:
+        method: "answer"
+        answer: "turing, lovelace, babbage"  # Accept if contains these names
+      
+    - id: 6
+      name: "Team Pyramid"
+      description: "Create a human pyramid with your team"
+      location: "Outdoor Area"
+      type: "team_activity"
+      verification:
+        method: "photo"
+      
+    - id: 7
+      name: "Scavenger Hunt"
+      description: "Find and photograph 5 different types of transportation in the area"
+      location: "Campus Area"
+      type: "scavenger"
+      verification:
+        method: "photo"
+      
+    - id: 8
+      name: "Secret Message"
+      description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
+      location: "Anywhere"
+      type: "decryption"
+      verification:
+        method: "answer"
+        answer: "congratulations"
 
 # Admin user (Telegram user ID)
 # Note: Only one admin is allowed
