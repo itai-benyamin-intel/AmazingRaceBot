@@ -6,11 +6,50 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 
 - 🏁 **Team Management**: Create and join teams
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
+- 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
 - 👥 **Multi-team Support**: Support for multiple teams competing simultaneously
 - 🔐 **Admin Controls**: Game start/stop, reset, and team management functionality
 - 📊 **Admin Team Management**: View, edit, add, and remove teams
 - 💾 **Persistent State**: Game state saved across bot restarts
+
+## Challenge Types
+
+The bot supports various challenge types with different verification methods:
+
+### Supported Challenge Types
+
+1. **📷 Photo Challenge**: Teams submit photos (e.g., team photo at location, completed puzzle)
+   - Verification: Photo submission (auto-accepted)
+   
+2. **🧩 Riddle/Clue Challenge**: Teams solve riddles or puzzles
+   - Verification: Text answer (auto-checked)
+   
+3. **💻 Code Challenge**: Teams write or debug code
+   - Verification: Text submission with keyword matching
+   
+4. **📱 QR Hunt Challenge**: Teams find and scan QR codes
+   - Verification: Text answer from QR code
+   
+5. **❓ Trivia Challenge**: Teams answer questions
+   - Verification: Text answer (supports multiple keywords)
+   
+6. **🔍 Scavenger Hunt**: Teams find and document items
+   - Verification: Photo submission
+   
+7. **🤝 Team Activity**: Teams perform activities together
+   - Verification: Photo/video submission
+   
+8. **🔐 Decryption Challenge**: Teams decrypt encoded messages
+   - Verification: Text answer
+
+### Verification Methods
+
+- **Photo**: Teams submit a photo which is automatically accepted and sent to admin
+- **Answer**: Text answer is automatically verified against configured answer(s)
+  - Supports exact match or keyword matching
+  - Case-insensitive comparison
+  - For trivia: supports multiple required keywords (comma-separated)
 
 ## Game Structure
 
@@ -78,8 +117,10 @@ The bot will start and be ready to receive commands!
 - `/createteam <team_name>` - Create a new team (you become the captain)
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
-- `/challenges` - View available and unlocked challenges
-- `/submit <challenge_id>` - Submit a completed challenge
+- `/challenges` - View available and unlocked challenges with types and instructions
+- `/submit <challenge_id> [answer]` - Submit a challenge completion
+  - For photo challenges: `/submit <id>` then send a photo
+  - For answer challenges: `/submit <id> <your answer>`
 - `/leaderboard` - View current team standings
 - `/teams` - List all teams
 - `/contact` - Contact the bot admin
@@ -127,7 +168,39 @@ game:
       name: "Challenge Name"
       description: "What teams need to do"
       location: "Where to go"
+      type: "photo"  # Challenge type (photo, riddle, code, qr, trivia, etc.)
+      verification:
+        method: "photo"  # Verification method (photo or answer)
+    
+    - id: 2
+      name: "Riddle Challenge"
+      description: "What has keys but no locks?"
+      location: "Library"
+      type: "riddle"
+      verification:
+        method: "answer"
+        answer: "keyboard"  # Expected answer (case-insensitive)
+    
+    - id: 3
+      name: "Trivia Challenge"
+      description: "Name three programming languages"
+      location: "Anywhere"
+      type: "trivia"
+      verification:
+        method: "answer"
+        answer: "python, java, javascript"  # Comma-separated for multiple keywords
 ```
+
+### Challenge Configuration Fields
+
+- **id**: Unique challenge number (sequential: 1, 2, 3, etc.)
+- **name**: Display name of the challenge
+- **description**: Instructions for the challenge
+- **location**: Where the challenge takes place
+- **type**: Challenge type (photo, riddle, code, qr, trivia, scavenger, team_activity, decryption, text)
+- **verification**: Verification configuration
+  - **method**: "photo" or "answer"
+  - **answer**: (for answer method) Expected answer or comma-separated keywords
 
 **Note**: Challenges are completed sequentially based on their ID order (1, 2, 3, etc.)
 
@@ -154,11 +227,16 @@ uCodeAmazingRace/
 - Admins can create, edit, and remove teams
 
 ### Challenge System
-- Challenges are defined in the configuration file
-- Each challenge has an ID, name, description, and location
+- Challenges are defined in the configuration file with types and verification methods
+- Each challenge has an ID, name, description, location, type, and verification config
 - **Teams must complete challenges in sequential order (1, 2, 3, etc.)**
 - Each challenge can only be completed once per team
 - Next challenge is unlocked only after completing the previous one
+- Different challenge types support different submission methods:
+  - **Photo challenges**: Submit photos which are auto-accepted
+  - **Answer challenges**: Submit text answers which are auto-verified
+  - **Trivia challenges**: Support multiple required keywords
+- Challenge instructions are displayed based on the challenge type
 
 ### Winning
 - The winner is the **first team to complete all challenges**
@@ -189,9 +267,26 @@ async def my_custom_command(self, update: Update, context: ContextTypes.DEFAULT_
 application.add_handler(CommandHandler("mycommand", self.my_custom_command))
 ```
 
-### Modifying Challenge Validation
+### Challenge Verification
 
-You can add custom validation logic in the `submit_command` method in `bot.py` to verify challenge completions (e.g., requiring photo proof, location verification, etc.).
+The bot supports automatic verification for challenges:
+
+**Photo Challenges:**
+- Teams submit photos via Telegram
+- Photos are automatically accepted and marked as complete
+- Admin receives a copy of each photo submission
+
+**Answer Challenges:**
+- Teams submit text answers via the `/submit` command
+- Answers are automatically verified against configured expected answers
+- Supports exact match or keyword matching
+- Case-insensitive comparison
+
+**Customizing Verification:**
+You can customize verification logic in the `verify_answer` method in `bot.py`. For example:
+- Add location-based verification using GPS coordinates
+- Implement time-based challenges
+- Add custom answer validation rules
 
 ## Troubleshooting
 
