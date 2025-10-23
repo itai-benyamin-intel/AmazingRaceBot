@@ -24,7 +24,9 @@ This document shows example interactions with the Amazing Race bot.
 ```
 User: /start
 Bot: 🏁 Welcome to uCode Amazing Race! 🏁
-     [Welcome message with commands]
+     This is an interactive Amazing Race game.
+     Complete challenges sequentially to win!
+     [Commands list...]
 
 User: /createteam Speed Demons
 Bot: ✅ Team 'Speed Demons' created successfully!
@@ -60,17 +62,17 @@ Bot: ✅ You joined team 'Code Runners'!
 User: /challenges
 Bot: 🎯 Challenges 🎯
 
-     ⭕ Challenge #1: First Challenge
+     🎯 Challenge #1: First Challenge (CURRENT)
         📍 Location: Main Hall
         📝 Find the hidden clue in the main hall
-        🏆 Points: 10
 
-     ⭕ Challenge #2: Code Puzzle
-        📍 Location: Lab A
-        📝 Solve the programming puzzle
-        🏆 Points: 20
+     🔒 Challenge #2: LOCKED
+        Complete previous challenges to unlock
 
-     [... more challenges ...]
+     🔒 Challenge #3: LOCKED
+        Complete previous challenges to unlock
+
+     [... more locked challenges ...]
 ```
 
 ```
@@ -79,11 +81,29 @@ Bot: 👥 Teams 👥
 
      Speed Demons
        Members: 2/5
-       Score: 0 points
+       Progress: 0/4
 
      Code Runners
        Members: 2/5
-       Score: 0 points
+       Progress: 0/4
+```
+
+**Admin:**
+```
+User: /teamstatus
+Bot: 📊 Detailed Team Status 📊
+
+     Speed Demons
+       👥 Members (2): Alice, Bob
+       👑 Captain: Alice
+       📊 Progress: 0/4
+       🎯 Current Challenge: #1
+
+     Code Runners
+       👥 Members (2): Charlie, Diana
+       👑 Captain: Charlie
+       📊 Progress: 0/4
+       🎯 Current Challenge: #1
 ```
 
 ### Phase 3: Game Start
@@ -105,26 +125,22 @@ Bot: 🏁 THE GAME HAS STARTED! 🏁
 User: /submit 1
 Bot: 🎉 Congratulations! Team 'Speed Demons' completed:
      First Challenge
-     Points earned: 10
-     Total score: 10
+     Progress: 1/4 challenges
+```
+
+**Team Speed Demons - Player 1 (trying to skip ahead):**
+```
+User: /submit 3
+Bot: You must complete challenges in order!
+     Your current challenge is #2.
 ```
 
 **Team Code Runners - Player 3:**
 ```
-User: /submit 2
+User: /submit 1
 Bot: 🎉 Congratulations! Team 'Code Runners' completed:
-     Code Puzzle
-     Points earned: 20
-     Total score: 20
-```
-
-**Any Player:**
-```
-User: /leaderboard
-Bot: 🏆 Leaderboard 🏆
-
-     🥇 Code Runners - 20 points
-     🥈 Speed Demons - 10 points
+     First Challenge
+     Progress: 1/4 challenges
 ```
 
 **Team Speed Demons - Player 2:**
@@ -132,12 +148,40 @@ Bot: 🏆 Leaderboard 🏆
 User: /myteam
 Bot: 👥 Team: Speed Demons
 
-     🏆 Score: 10 points
-     📊 Challenges: 1/4 completed
+     🎯 Current Challenge: #2
+     📊 Progress: 1/4 challenges completed
 
      Members:
        • Alice
        • Bob
+```
+
+```
+User: /challenges
+Bot: 🎯 Challenges 🎯
+
+     ✅ Challenge #1: First Challenge
+        📍 Location: Main Hall
+        📝 Find the hidden clue in the main hall
+
+     🎯 Challenge #2: Code Puzzle (CURRENT)
+        📍 Location: Lab A
+        📝 Solve the programming puzzle
+
+     🔒 Challenge #3: LOCKED
+        Complete previous challenges to unlock
+
+     [...]
+```
+
+**Any Player:**
+```
+User: /leaderboard
+Bot: 🏆 Leaderboard 🏆
+
+     Still Racing:
+     🏃 Speed Demons - 1/4 challenges
+     🏃 Code Runners - 1/4 challenges
 ```
 
 **Team Speed Demons - Player 1:**
@@ -145,16 +189,36 @@ Bot: 👥 Team: Speed Demons
 User: /submit 2
 Bot: 🎉 Congratulations! Team 'Speed Demons' completed:
      Code Puzzle
-     Points earned: 20
-     Total score: 30
+     Progress: 2/4 challenges
+```
+
+```
+User: /submit 3
+Bot: 🎉 Congratulations! Team 'Speed Demons' completed:
+     Team Challenge
+     Progress: 3/4 challenges
+```
+
+```
+User: /submit 4
+Bot: 🎉 Congratulations! Team 'Speed Demons' completed:
+     Final Sprint
+     Progress: 4/4 challenges
+
+     🏆 CONGRATULATIONS! 🏆
+     Your team finished the race!
+     Finish time: 2024-01-15T14:30:25.123456
 ```
 
 ```
 User: /leaderboard
 Bot: 🏆 Leaderboard 🏆
 
-     🥇 Speed Demons - 30 points
-     🥈 Code Runners - 20 points
+     Finished Teams:
+     🥇 Speed Demons - Finished!
+
+     Still Racing:
+     🏃 Code Runners - 1/4 challenges
 ```
 
 ### Phase 5: Game End
@@ -166,10 +230,35 @@ Bot: 🏁 GAME OVER! 🏁
 
      Final Standings:
 
-     🥇 Speed Demons - 30 points
-     🥈 Code Runners - 20 points
+     Finished Teams:
+     🥇 Speed Demons - Completed all challenges!
+
+     Did Not Finish:
+        Code Runners - 1/4 challenges
 
      🎉 Congratulations to all teams! 🎉
+```
+
+## Admin Team Management Examples
+
+**Admin creating a team:**
+```
+User: /addteam Late Arrivals
+Bot: ✅ Team 'Late Arrivals' created successfully!
+     Note: This is an admin-created team. You can add members using:
+     Players can join with /jointeam Late Arrivals
+```
+
+**Admin renaming a team:**
+```
+User: /editteam "Speed Demons" "Lightning Demons"
+Bot: ✅ Team renamed from 'Speed Demons' to 'Lightning Demons'
+```
+
+**Admin removing a team:**
+```
+User: /removeteam "Late Arrivals"
+Bot: ✅ Team 'Late Arrivals' has been removed.
 ```
 
 ## Error Handling Examples
@@ -192,6 +281,13 @@ User: /submit 1
 Bot: This challenge was already completed by your team!
 ```
 
+**Trying to skip a challenge:**
+```
+User: /submit 3
+Bot: You must complete challenges in order!
+     Your current challenge is #1.
+```
+
 **Non-admin trying admin command:**
 ```
 User: /startgame
@@ -209,19 +305,22 @@ Bot: You are not in any team!
 1. **Before the event:**
    - Test all commands
    - Verify challenges are configured correctly
-   - Make sure bot responds quickly
+   - Make sure challenge IDs are sequential (1, 2, 3, etc.)
+   - Test the sequential unlock mechanism
 
 2. **During setup:**
    - Give players 10-15 minutes to form teams
+   - Explain that challenges must be done in order
    - Show them the `/challenges` command
    - Explain the rules clearly
 
 3. **During gameplay:**
-   - Monitor the leaderboard
+   - Monitor with `/teamstatus` to see all teams' progress
    - Be ready to help with technical issues
+   - Use `/editteam` to fix any team name typos
    - Consider having a backup admin
 
 4. **After the game:**
-   - Announce winners
+   - Announce winners (first to finish wins!)
    - Use `/reset` to clear for next game
    - Keep `game_state.json` as a record if needed

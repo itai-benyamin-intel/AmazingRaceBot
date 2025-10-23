@@ -1,15 +1,28 @@
 # uCode Amazing Race - Telegram Bot
 
-A Telegram chatbot template for managing an Amazing Race game. This bot allows teams to register, track their progress through challenges, and compete for the highest score.
+A Telegram chatbot template for managing an Amazing Race game. This bot allows teams to register, track their progress through sequential challenges, and compete to finish first.
 
 ## Features
 
 - 🏁 **Team Management**: Create and join teams
-- 🎯 **Challenge Tracking**: Track challenge completions and scores
-- 🏆 **Leaderboard**: Real-time standings
+- 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
+- 🏆 **Leaderboard**: Real-time standings showing progress and finishers
 - 👥 **Multi-team Support**: Support for multiple teams competing simultaneously
-- 🔐 **Admin Controls**: Game start/stop and reset functionality
+- 🔐 **Admin Controls**: Game start/stop, reset, and team management functionality
+- 📊 **Admin Team Management**: View, edit, add, and remove teams
 - 💾 **Persistent State**: Game state saved across bot restarts
+
+## Game Structure
+
+### Sequential Challenges
+Unlike traditional scavenger hunts, this Amazing Race requires teams to complete challenges **in order**:
+- Teams start with only Challenge #1 unlocked
+- After completing Challenge #1, Challenge #2 is unlocked
+- This continues until all challenges are completed
+- The first team to complete all challenges wins!
+
+### Winning Condition
+The winner is determined by **who finishes first**, not by points. Teams that complete all challenges are ranked by their finish time.
 
 ## Setup
 
@@ -64,7 +77,7 @@ The bot will start and be ready to receive commands!
 - `/createteam <team_name>` - Create a new team (you become the captain)
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
-- `/challenges` - View all available challenges
+- `/challenges` - View available and unlocked challenges
 - `/submit <challenge_id>` - Submit a completed challenge
 - `/leaderboard` - View current team standings
 - `/teams` - List all teams
@@ -74,6 +87,10 @@ The bot will start and be ready to receive commands!
 - `/startgame` - Start the game (allows teams to submit challenges)
 - `/endgame` - End the game and show final standings
 - `/reset` - Reset all game data (use with caution!)
+- `/teamstatus` - View detailed status of all teams
+- `/addteam <name>` - Create a team as admin
+- `/editteam <old_name> <new_name>` - Rename a team
+- `/removeteam <name>` - Remove a team
 
 ## Game Flow
 
@@ -83,14 +100,15 @@ The bot will start and be ready to receive commands!
 
 2. **Game Phase**
    - Admin starts the game with `/startgame`
-   - Teams complete challenges in the real world
-   - Teams submit completions using `/submit <challenge_id>`
-   - Scores update automatically
+   - Teams complete Challenge #1 first
+   - After submitting Challenge #1, Challenge #2 is unlocked
+   - Teams continue sequentially through all challenges
+   - First team to complete all challenges wins!
 
 3. **End Phase**
    - Admin ends the game with `/endgame`
    - Final leaderboard is displayed
-   - Winners are announced!
+   - Winner is the team that finished first!
 
 ## Configuration
 
@@ -106,9 +124,10 @@ game:
     - id: 1
       name: "Challenge Name"
       description: "What teams need to do"
-      points: 10
       location: "Where to go"
 ```
+
+**Note**: Challenges are completed sequentially based on their ID order (1, 2, 3, etc.)
 
 ## File Structure
 
@@ -119,6 +138,7 @@ uCodeAmazingRace/
 ├── config.yml             # Your configuration (create from example)
 ├── config.example.yml     # Example configuration
 ├── requirements.txt       # Python dependencies
+├── test_game_state.py     # Unit tests
 ├── game_state.json        # Persistent game state (auto-generated)
 └── README.md             # This file
 ```
@@ -129,21 +149,26 @@ uCodeAmazingRace/
 - Teams can have up to 5 members (configurable)
 - Each player can only be in one team
 - Team captains are the players who create the team
+- Admins can create, edit, and remove teams
 
 ### Challenge System
 - Challenges are defined in the configuration file
-- Each challenge has an ID, name, description, location, and point value
-- Teams can complete challenges in any order
+- Each challenge has an ID, name, description, and location
+- **Teams must complete challenges in sequential order (1, 2, 3, etc.)**
 - Each challenge can only be completed once per team
+- Next challenge is unlocked only after completing the previous one
 
-### Scoring
-- Teams earn points by completing challenges
-- Points are defined per challenge
-- Leaderboard ranks teams by total points
+### Winning
+- The winner is the **first team to complete all challenges**
+- Teams that finish are ranked by their finish time
+- Teams still racing are ranked by number of completed challenges
+- No points system - it's a race to finish!
 
 ### Admin Controls
 - Only users listed in the `admins` section can use admin commands
 - Admins can start/end the game and reset state
+- Admins can view detailed team status with `/teamstatus`
+- Admins can manage teams (add, edit, remove)
 - The game must be started before teams can submit challenges
 
 ## Customization
@@ -178,6 +203,10 @@ You can add custom validation logic in the `submit_command` method in `bot.py` t
 ### State issues
 - Delete `game_state.json` to reset the game state
 - Or use the `/reset` command (admin only)
+
+### Sequential challenge issues
+- Make sure challenge IDs in `config.yml` are sequential (1, 2, 3, 4, etc.)
+- Teams must complete challenges in order - they cannot skip ahead
 
 ## Contributing
 
