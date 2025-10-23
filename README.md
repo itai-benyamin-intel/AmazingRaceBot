@@ -118,10 +118,11 @@ The bot will start and be ready to receive commands!
 - `/createteam <team_name>` - Create a new team (you become the captain)
 - `/jointeam <team_name>` - Join an existing team
 - `/myteam` - View your team's information and progress
-- `/challenges` - View available and unlocked challenges with types and instructions
-- `/submit <challenge_id> [answer]` - Submit a challenge completion
-  - For photo challenges: `/submit <id>` then send a photo
-  - For answer challenges: `/submit <id> <your answer>`
+- `/challenges` - View all challenges with types and instructions
+- `/current_challenge` - View your current challenge
+- `/submit [answer]` - Submit current challenge
+  - For photo challenges: `/submit` then send a photo
+  - For answer challenges: `/submit <your answer>`
 - `/leaderboard` - View current team standings
 - `/teams` - List all teams
 - `/contact` - Contact the bot admin

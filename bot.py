@@ -215,7 +215,8 @@ class AmazingRaceBot:
             "/myteam - View your team info\n"
             "/leaderboard - View current standings\n"
             "/challenges - View challenges\n"
-            "/submit <challenge_id> - Submit a challenge completion\n"
+            "/current_challenge - View your current challenge\n"
+            "/submit [answer] - Submit current challenge\n"
             "/contact - Contact the bot admin\n\n"
             "Admin commands:\n"
             "/startgame - Start the game\n"
@@ -236,8 +237,9 @@ class AmazingRaceBot:
             "/jointeam <name> - Join an existing team\n"
             "/myteam - View your team information\n"
             "/leaderboard - View current standings\n"
-            "/challenges - View challenges (sequential)\n"
-            "/submit <challenge_id> - Submit challenge completion\n"
+            "/challenges - View all challenges (sequential)\n"
+            "/current_challenge - View your current challenge\n"
+            "/submit [answer] - Submit current challenge\n"
             "/teams - List all teams\n"
             "/contact - Contact the bot admin\n\n"
             "*Admin Commands:*\n"
@@ -415,22 +417,46 @@ class AmazingRaceBot:
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
-    async def submit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /submit command."""
-        if not context.args:
+    async def current_challenge_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /current_challenge command."""
+        user = update.effective_user
+        team_name = self.game_state.get_team_by_user(user.id)
+        
+        if not team_name:
+            await update.message.reply_text("You are not in any team yet! Use /createteam or /jointeam")
+            return
+        
+        team = self.game_state.teams[team_name]
+        current_challenge_index = team.get('current_challenge_index', 0)
+        
+        # Check if all challenges are completed
+        if current_challenge_index >= len(self.challenges):
             await update.message.reply_text(
-                "Usage: /submit <challenge_id> [answer]\n"
-                "For photo challenges: /submit <challenge_id> then send a photo\n"
-                "For text/answer challenges: /submit <challenge_id> <your answer>"
+                "🏆 Congratulations! Your team has completed all challenges!\n"
+                f"Finish time: {team.get('finish_time', 'N/A')}"
             )
             return
         
-        try:
-            challenge_id = int(context.args[0])
-        except ValueError:
-            await update.message.reply_text("Invalid challenge ID!")
-            return
+        # Get current challenge
+        challenge = self.challenges[current_challenge_index]
+        challenge_type = challenge.get('type', 'text')
+        type_emoji = self.get_challenge_type_emoji(challenge_type)
+        instructions = self.get_challenge_instructions(challenge)
         
+        message = (
+            f"🎯 *Your Current Challenge*\n\n"
+            f"*Challenge #{challenge['id']}: {challenge['name']}*\n"
+            f"{type_emoji} Type: {challenge_type}\n"
+            f"📍 Location: {challenge['location']}\n"
+            f"📝 {challenge['description']}\n\n"
+            f"ℹ️ {instructions}\n\n"
+            f"Use /submit [answer] to submit this challenge."
+        )
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
+    
+    async def submit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /submit command."""
         # Check if game has started
         if not self.game_state.game_started:
             await update.message.reply_text("The game hasn't started yet!")
@@ -447,25 +473,42 @@ class AmazingRaceBot:
             await update.message.reply_text("You are not in any team!")
             return
         
-        # Find challenge
-        challenge = next((c for c in self.challenges if c['id'] == challenge_id), None)
-        if not challenge:
-            await update.message.reply_text("Challenge not found!")
-            return
-        
         # Get current challenge that should be completed
         team = self.game_state.teams[team_name]
         expected_challenge_id = team.get('current_challenge_index', 0) + 1
         
-        # Check if this is the correct challenge to complete
-        if challenge_id != expected_challenge_id:
-            if challenge_id in team['completed_challenges']:
-                await update.message.reply_text("This challenge was already completed by your team!")
-            else:
-                await update.message.reply_text(
-                    f"You must complete challenges in order!\n"
-                    f"Your current challenge is #{expected_challenge_id}."
-                )
+        # Determine challenge_id (use current challenge if not provided)
+        challenge_id = None
+        answer_offset = 0  # Offset for answer in context.args
+        
+        if context.args:
+            # Check if first arg is a number (challenge_id) or text (answer)
+            try:
+                challenge_id = int(context.args[0])
+                answer_offset = 1
+                # Verify the provided challenge_id matches expected
+                if challenge_id != expected_challenge_id:
+                    if challenge_id in team['completed_challenges']:
+                        await update.message.reply_text("This challenge was already completed by your team!")
+                    else:
+                        await update.message.reply_text(
+                            f"You must complete challenges in order!\n"
+                            f"Your current challenge is #{expected_challenge_id}.\n"
+                            f"Use /submit [answer] to submit it."
+                        )
+                    return
+            except ValueError:
+                # First arg is not a number, treat it as answer
+                challenge_id = expected_challenge_id
+                answer_offset = 0
+        else:
+            # No args, use current challenge
+            challenge_id = expected_challenge_id
+        
+        # Find challenge
+        challenge = next((c for c in self.challenges if c['id'] == challenge_id), None)
+        if not challenge:
+            await update.message.reply_text("Challenge not found!")
             return
         
         # Check location verification for challenges 2 onwards (if enabled)
@@ -494,14 +537,14 @@ class AmazingRaceBot:
         # Handle different verification methods
         if method == 'answer':
             # Text answer verification
-            if len(context.args) < 2:
+            if len(context.args) <= answer_offset:
                 await update.message.reply_text(
                     f"Please provide your answer:\n"
-                    f"/submit {challenge_id} <your answer>"
+                    f"/submit <your answer>"
                 )
                 return
             
-            user_answer = ' '.join(context.args[1:])
+            user_answer = ' '.join(context.args[answer_offset:])
             
             if self.verify_answer(challenge, user_answer):
                 # Answer is correct
@@ -974,7 +1017,7 @@ class AmazingRaceBot:
                 f"Challenge: *{current_challenge['name']}*\n"
                 f"Location: {current_challenge['location']}\n\n"
                 f"You can now complete this challenge!\n"
-                f"Use /submit {current_challenge['id']} to submit your answer."
+                f"Use /submit [answer] to submit your answer."
             )
             await update.message.reply_text(response, parse_mode='Markdown')
         else:
@@ -1062,6 +1105,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("myteam", self.my_team_command))
         application.add_handler(CommandHandler("leaderboard", self.leaderboard_command))
         application.add_handler(CommandHandler("challenges", self.challenges_command))
+        application.add_handler(CommandHandler("current_challenge", self.current_challenge_command))
         application.add_handler(CommandHandler("submit", self.submit_command))
         application.add_handler(CommandHandler("contact", self.contact_command))
         application.add_handler(CommandHandler("startgame", self.start_game_command))
