@@ -18,6 +18,7 @@ class GameState:
         self.game_ended: bool = False
         self.location_verification_enabled: bool = False
         self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
+        self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
         self.load_state()
     
     def load_state(self):
@@ -32,6 +33,7 @@ class GameState:
                     self.game_ended = data.get('game_ended', False)
                     self.location_verification_enabled = data.get('location_verification_enabled', False)
                     self.hint_usage = data.get('hint_usage', {})
+                    self.pending_photo_submissions = data.get('pending_photo_submissions', {})
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -44,7 +46,8 @@ class GameState:
                 'game_started': self.game_started,
                 'game_ended': self.game_ended,
                 'location_verification_enabled': self.location_verification_enabled,
-                'hint_usage': self.hint_usage
+                'hint_usage': self.hint_usage,
+                'pending_photo_submissions': self.pending_photo_submissions
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -178,6 +181,7 @@ class GameState:
         self.game_ended = False
         self.location_verification_enabled = False
         self.hint_usage = {}
+        self.pending_photo_submissions = {}
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 
@@ -408,4 +412,106 @@ class GameState:
         unlock_time = completion_time + timedelta(seconds=penalty_seconds)
         
         return unlock_time.isoformat()
+    
+    def add_pending_photo_submission(self, team_name: str, challenge_id: int, 
+                                     photo_id: str, user_id: int, user_name: str) -> str:
+        """Add a pending photo submission.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            photo_id: Telegram photo file ID
+            user_id: ID of user who submitted
+            user_name: Name of user who submitted
+            
+        Returns:
+            Submission ID (unique identifier for this submission)
+        """
+        submission_id = f"{team_name}_{challenge_id}_{datetime.now().timestamp()}"
+        
+        self.pending_photo_submissions[submission_id] = {
+            'team_name': team_name,
+            'challenge_id': challenge_id,
+            'photo_id': photo_id,
+            'user_id': user_id,
+            'user_name': user_name,
+            'timestamp': datetime.now().isoformat(),
+            'status': 'pending'
+        }
+        
+        self.save_state()
+        return submission_id
+    
+    def get_pending_photo_submissions(self) -> Dict[str, Dict]:
+        """Get all pending photo submissions.
+        
+        Returns:
+            Dictionary of pending submissions
+        """
+        return {k: v for k, v in self.pending_photo_submissions.items() 
+                if v.get('status') == 'pending'}
+    
+    def approve_photo_submission(self, submission_id: str, total_challenges: int) -> bool:
+        """Approve a photo submission and complete the challenge.
+        
+        Args:
+            submission_id: ID of the submission to approve
+            total_challenges: Total number of challenges in the game
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if submission_id not in self.pending_photo_submissions:
+            return False
+        
+        submission = self.pending_photo_submissions[submission_id]
+        team_name = submission['team_name']
+        challenge_id = submission['challenge_id']
+        
+        # Complete the challenge
+        submission_data = {
+            'type': 'photo',
+            'photo_id': submission['photo_id'],
+            'timestamp': submission['timestamp'],
+            'submitted_by': submission['user_id'],
+            'user_name': submission['user_name'],
+            'team_name': team_name,
+            'status': 'approved'
+        }
+        
+        if self.complete_challenge(team_name, challenge_id, total_challenges, submission_data):
+            # Mark submission as approved
+            self.pending_photo_submissions[submission_id]['status'] = 'approved'
+            self.save_state()
+            return True
+        
+        return False
+    
+    def reject_photo_submission(self, submission_id: str) -> bool:
+        """Reject a photo submission.
+        
+        Args:
+            submission_id: ID of the submission to reject
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if submission_id not in self.pending_photo_submissions:
+            return False
+        
+        # Mark submission as rejected
+        self.pending_photo_submissions[submission_id]['status'] = 'rejected'
+        self.save_state()
+        return True
+    
+    def get_submission_by_id(self, submission_id: str) -> Optional[Dict]:
+        """Get a submission by its ID.
+        
+        Args:
+            submission_id: ID of the submission
+            
+        Returns:
+            Submission data or None if not found
+        """
+        return self.pending_photo_submissions.get(submission_id)
 
