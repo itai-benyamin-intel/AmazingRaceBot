@@ -202,6 +202,69 @@ class AmazingRaceBot:
         else:
             return "📝 Submit your response to complete this challenge."
     
+    async def broadcast_challenge_completion(self, context: ContextTypes.DEFAULT_TYPE, 
+                                            team_name: str, challenge_id: int, 
+                                            challenge_name: str, submitted_by_id: int,
+                                            submitted_by_name: str, completed: int, 
+                                            total: int):
+        """Broadcast challenge completion message to team members and admin.
+        
+        Args:
+            context: Telegram context
+            team_name: Name of the team
+            challenge_id: ID of the completed challenge
+            challenge_name: Name of the completed challenge
+            submitted_by_id: ID of user who submitted
+            submitted_by_name: Name of user who submitted
+            completed: Number of challenges completed
+            total: Total number of challenges
+        """
+        team_data = self.game_state.teams[team_name]
+        
+        # Create broadcast message
+        broadcast_message = (
+            f"✅ *Challenge Completed!*\n\n"
+            f"Team: {team_name}\n"
+            f"Challenge #{challenge_id}: {challenge_name}\n"
+            f"Submitted by: {submitted_by_name}\n"
+            f"Progress: {completed}/{total} challenges"
+        )
+        
+        # Add finish message if team completed all challenges
+        if team_data.get('finish_time'):
+            broadcast_message += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+            broadcast_message += f"Your team finished the race!\n"
+            broadcast_message += f"Finish time: {team_data['finish_time']}"
+        
+        # Broadcast to all team members
+        sent_to_users = set()
+        for member in team_data['members']:
+            member_id = member['id']
+            # Skip the user who submitted (they already got the message)
+            if member_id == submitted_by_id or member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=broadcast_message,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+            except Exception as e:
+                logger.error(f"Failed to send completion broadcast to user {member_id}: {e}")
+        
+        # Notify admin
+        if self.admin_id and self.admin_id not in sent_to_users:
+            try:
+                await context.bot.send_message(
+                    chat_id=self.admin_id,
+                    text=broadcast_message,
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Failed to send completion broadcast to admin: {e}")
+    
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /start command."""
         welcome_message = (
@@ -397,7 +460,6 @@ class AmazingRaceBot:
             if current_challenge_index > 0:  # Not the first challenge
                 unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
                 if unlock_time_str:
-                    from datetime import datetime
                     unlock_time = datetime.fromisoformat(unlock_time_str)
                     now = datetime.now()
                     
@@ -482,7 +544,6 @@ class AmazingRaceBot:
         if current_challenge_index > 0:  # Not the first challenge
             unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
             if unlock_time_str:
-                from datetime import datetime
                 unlock_time = datetime.fromisoformat(unlock_time_str)
                 now = datetime.now()
                 
@@ -756,7 +817,6 @@ class AmazingRaceBot:
         if current_challenge_index > 0:  # Not the first challenge
             unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
             if unlock_time_str:
-                from datetime import datetime
                 unlock_time = datetime.fromisoformat(unlock_time_str)
                 now = datetime.now()
                 
@@ -845,7 +905,6 @@ class AmazingRaceBot:
                         next_challenge_id = challenge_id + 1
                         unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
                         if unlock_time_str:
-                            from datetime import datetime
                             unlock_time = datetime.fromisoformat(unlock_time_str)
                             hint_count = self.game_state.get_hint_count(team_name, challenge_id)
                             penalty_minutes = hint_count * 2
@@ -858,6 +917,12 @@ class AmazingRaceBot:
                             )
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
+                    
+                    # Broadcast completion to team and admin
+                    await self.broadcast_challenge_completion(
+                        context, team_name, challenge_id, challenge['name'],
+                        user.id, user.first_name, completed, total
+                    )
                 else:
                     await update.message.reply_text("Error completing challenge. Please try again.")
             else:
@@ -1202,7 +1267,6 @@ class AmazingRaceBot:
                 next_challenge_id = challenge_id + 1
                 unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
                 if unlock_time_str:
-                    from datetime import datetime
                     unlock_time = datetime.fromisoformat(unlock_time_str)
                     hint_count = self.game_state.get_hint_count(team_name, challenge_id)
                     penalty_minutes = hint_count * 2
@@ -1216,23 +1280,28 @@ class AmazingRaceBot:
             
             await update.message.reply_text(response, parse_mode='Markdown')
             
-            # Notify admin
+            # Broadcast completion to team and admin
+            await self.broadcast_challenge_completion(
+                context, team_name, challenge_id, challenge_name,
+                user.id, user.first_name, completed, total
+            )
+            
+            # Also send photo to admin
             if self.admin_id:
                 try:
                     await context.bot.send_photo(
                         chat_id=self.admin_id,
                         photo=photo.file_id,
                         caption=(
-                            f"📷 *New Photo Submission*\n"
+                            f"📷 *Photo Submission*\n"
                             f"Team: {team_name}\n"
                             f"Challenge #{challenge_id}: {challenge_name}\n"
-                            f"Submitted by: {user.first_name}\n"
-                            f"Status: Automatically accepted (challenge marked complete)"
+                            f"Submitted by: {user.first_name}"
                         ),
                         parse_mode='Markdown'
                     )
                 except Exception as e:
-                    logger.error(f"Failed to notify admin: {e}")
+                    logger.error(f"Failed to send photo to admin: {e}")
             
             # Remove pending submission
             del context.bot_data['pending_submissions'][user.id]

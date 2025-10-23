@@ -3,6 +3,11 @@
 ## [Unreleased] - 2025-10-23
 
 ### Added
+- **Challenge Completion Broadcast**: When a challenge is solved, a confirmation message is broadcast to:
+  - All team members (except the person who submitted)
+  - The admin
+  - Message includes team name, challenge name, who submitted it, and progress
+  - Includes special congratulations message when team finishes all challenges
 - **Challenge Types System**: Support for diverse challenge types with automatic verification
   - Photo challenges: Submit photos (auto-accepted, admin receives copy)
   - Riddle challenges: Text answer verification with keyword matching

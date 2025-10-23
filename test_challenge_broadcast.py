@@ -1,0 +1,273 @@
+"""
+Unit tests for challenge completion broadcast functionality.
+"""
+import unittest
+import os
+import yaml
+from unittest.mock import AsyncMock, MagicMock, patch, call
+from bot import AmazingRaceBot
+
+
+class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
+    """Test cases for challenge completion broadcast."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_config_file = "test_broadcast_config.yml"
+        self.config = {
+            'telegram': {'bot_token': 'test_token'},
+            'game': {
+                'name': 'Test Game',
+                'max_teams': 10,
+                'max_team_size': 5,
+                'challenges': [
+                    {
+                        'id': 1,
+                        'name': 'Challenge 1',
+                        'description': 'First challenge',
+                        'location': 'Start',
+                        'type': 'riddle',
+                        'verification': {
+                            'method': 'answer',
+                            'answer': 'test1'
+                        }
+                    },
+                    {
+                        'id': 2,
+                        'name': 'Challenge 2',
+                        'description': 'Second challenge',
+                        'location': 'Library',
+                        'type': 'photo',
+                        'verification': {
+                            'method': 'photo'
+                        }
+                    }
+                ]
+            },
+            'admin': 999999999
+        }
+        
+    def tearDown(self):
+        """Clean up test files."""
+        if os.path.exists(self.test_config_file):
+            os.remove(self.test_config_file)
+        if os.path.exists("game_state.json"):
+            os.remove("game_state.json")
+    
+    async def test_broadcast_to_team_members_on_answer_challenge(self):
+        """Test that challenge completion is broadcast to all team members for answer challenge."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Create team with multiple members
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.join_team("Team A", 222222, "Bob")
+        bot.game_state.join_team("Team A", 333333, "Charlie")
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test1']
+        context.bot_data = {}
+        context.bot.send_message = AsyncMock()
+        
+        # Submit challenge
+        await bot.submit_command(update, context)
+        
+        # Verify challenge was completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        
+        # Verify broadcast was sent
+        # Should have been called twice: once for Bob (222222) and once for Charlie (333333)
+        # Alice (111111) is the submitter so they don't get the broadcast
+        # Admin (999999999) should also get the broadcast
+        self.assertEqual(context.bot.send_message.call_count, 3)
+        
+        # Get all call arguments
+        calls = context.bot.send_message.call_args_list
+        sent_to_ids = [call[1]['chat_id'] for call in calls]
+        
+        # Verify Bob, Charlie, and Admin received the broadcast
+        self.assertIn(222222, sent_to_ids)  # Bob
+        self.assertIn(333333, sent_to_ids)  # Charlie
+        self.assertIn(999999999, sent_to_ids)  # Admin
+        
+        # Verify Alice (submitter) did NOT receive the broadcast
+        self.assertNotIn(111111, sent_to_ids)
+        
+        # Verify the message content
+        for call_obj in calls:
+            message_text = call_obj[1]['text']
+            self.assertIn("Challenge Completed!", message_text)
+            self.assertIn("Team A", message_text)
+            self.assertIn("Challenge 1", message_text)
+            self.assertIn("Alice", message_text)
+            self.assertIn("1/2 challenges", message_text)
+    
+    async def test_broadcast_includes_finish_message(self):
+        """Test that broadcast includes finish message when team completes all challenges."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Create team with two members
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.join_team("Team A", 222222, "Bob")
+        
+        # Complete first challenge manually
+        bot.game_state.complete_challenge("Team A", 1, 2, {'type': 'answer'})
+        
+        # Mock the update and context for photo submission
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        update.message.photo = [MagicMock()]
+        photo = update.message.photo[-1]
+        photo.file_id = "test_photo_id"
+        
+        context = MagicMock()
+        context.bot_data = {
+            'pending_submissions': {
+                111111: {
+                    'team_name': 'Team A',
+                    'challenge_id': 2,
+                    'challenge_name': 'Challenge 2'
+                }
+            }
+        }
+        context.bot.send_message = AsyncMock()
+        context.bot.send_photo = AsyncMock()
+        
+        # Submit photo for second challenge
+        await bot.photo_handler(update, context)
+        
+        # Verify team finished
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 2)
+        self.assertIsNotNone(team['finish_time'])
+        
+        # Verify broadcast was sent (to Bob and Admin)
+        self.assertEqual(context.bot.send_message.call_count, 2)
+        
+        # Verify the message includes finish information
+        calls = context.bot.send_message.call_args_list
+        for call_obj in calls:
+            message_text = call_obj[1]['text']
+            self.assertIn("CONGRATULATIONS", message_text)
+            self.assertIn("finished the race", message_text)
+    
+    async def test_no_broadcast_to_submitter(self):
+        """Test that the person who submitted doesn't receive the broadcast."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Create team with one member
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test1']
+        context.bot_data = {}
+        context.bot.send_message = AsyncMock()
+        
+        # Submit challenge
+        await bot.submit_command(update, context)
+        
+        # Verify challenge was completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        
+        # Verify broadcast was sent only to admin (not to Alice who is the only team member)
+        self.assertEqual(context.bot.send_message.call_count, 1)
+        
+        # Verify it was sent to admin
+        call_args = context.bot.send_message.call_args[1]
+        self.assertEqual(call_args['chat_id'], 999999999)
+    
+    async def test_broadcast_on_photo_challenge(self):
+        """Test that broadcast works for photo challenges."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Create team with two members and complete first challenge
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.join_team("Team A", 222222, "Bob")
+        bot.game_state.complete_challenge("Team A", 1, 2, {'type': 'answer'})
+        
+        # Mock the update and context for photo submission
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 222222  # Bob submits
+        update.effective_user.first_name = "Bob"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        update.message.photo = [MagicMock()]
+        photo = update.message.photo[-1]
+        photo.file_id = "test_photo_id"
+        
+        context = MagicMock()
+        context.bot_data = {
+            'pending_submissions': {
+                222222: {
+                    'team_name': 'Team A',
+                    'challenge_id': 2,
+                    'challenge_name': 'Challenge 2'
+                }
+            }
+        }
+        context.bot.send_message = AsyncMock()
+        context.bot.send_photo = AsyncMock()
+        
+        # Submit photo
+        await bot.photo_handler(update, context)
+        
+        # Verify broadcast was sent to Alice and Admin
+        self.assertEqual(context.bot.send_message.call_count, 2)
+        
+        calls = context.bot.send_message.call_args_list
+        sent_to_ids = [call[1]['chat_id'] for call in calls]
+        
+        # Verify Alice and Admin received it
+        self.assertIn(111111, sent_to_ids)  # Alice
+        self.assertIn(999999999, sent_to_ids)  # Admin
+        
+        # Verify Bob (submitter) did NOT receive the broadcast
+        self.assertNotIn(222222, sent_to_ids)
+        
+        # Verify admin also got the photo separately
+        self.assertEqual(context.bot.send_photo.call_count, 1)
+        photo_call = context.bot.send_photo.call_args[1]
+        self.assertEqual(photo_call['chat_id'], 999999999)
+        self.assertIn("Photo Submission", photo_call['caption'])
+
+
+if __name__ == '__main__':
+    unittest.main()
