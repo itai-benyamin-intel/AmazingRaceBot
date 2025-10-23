@@ -388,6 +388,35 @@ class AmazingRaceBot:
         
         message = "🎯 *Challenges* 🎯\n\n"
         
+        # Check if current challenge is locked due to penalty
+        penalty_info = None
+        if team_name and current_challenge_index < len(self.challenges):
+            current_challenge = self.challenges[current_challenge_index]
+            challenge_id = current_challenge['id']
+            
+            if current_challenge_index > 0:  # Not the first challenge
+                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+                if unlock_time_str:
+                    from datetime import datetime
+                    unlock_time = datetime.fromisoformat(unlock_time_str)
+                    now = datetime.now()
+                    
+                    if now < unlock_time:
+                        # Challenge is still locked
+                        time_remaining = unlock_time - now
+                        minutes = int(time_remaining.total_seconds() // 60)
+                        seconds = int(time_remaining.total_seconds() % 60)
+                        
+                        previous_challenge_id = challenge_id - 1
+                        hint_count = self.game_state.get_hint_count(team_name, previous_challenge_id)
+                        
+                        penalty_info = {
+                            'minutes': minutes,
+                            'seconds': seconds,
+                            'unlock_time': unlock_time,
+                            'hint_count': hint_count
+                        }
+        
         for i, challenge in enumerate(self.challenges):
             if i < current_challenge_index:
                 # Completed challenge - show title and brief description only
@@ -397,11 +426,23 @@ class AmazingRaceBot:
                 )
             elif i == current_challenge_index:
                 # Current challenge - show title and brief description only
-                message += (
-                    f"🎯 *{challenge['name']}* (CURRENT)\n"
-                    f"   {challenge['description']}\n\n"
-                )
+                if penalty_info:
+                    message += (
+                        f"⏱️ *{challenge['name']}* (LOCKED - Penalty Timeout)\n"
+                        f"   Challenge locked due to {penalty_info['hint_count']} hint(s) used\n"
+                        f"   ⏳ Unlocks in: {penalty_info['minutes']}m {penalty_info['seconds']}s\n"
+                        f"   Available at: {penalty_info['unlock_time'].strftime('%H:%M:%S')}\n\n"
+                    )
+                else:
+                    message += (
+                        f"🎯 *{challenge['name']}* (CURRENT)\n"
+                        f"   {challenge['description']}\n\n"
+                    )
             # Locked challenges are not shown anymore
+        
+        if penalty_info:
+            message += "⏱️ Your current challenge is locked due to hint penalty.\n"
+            message += f"It will unlock at {penalty_info['unlock_time'].strftime('%H:%M:%S')}.\n\n"
         
         message += "Use /current_challenge to see full details of your current challenge.\n"
         message += "Use /submit [answer] to submit your answers."
@@ -430,38 +471,80 @@ class AmazingRaceBot:
         
         # Get current challenge
         challenge = self.challenges[current_challenge_index]
+        challenge_id = challenge['id']
         challenge_type = challenge.get('type', 'text')
         type_emoji = self.get_challenge_type_emoji(challenge_type)
         instructions = self.get_challenge_instructions(challenge)
         
-        message = (
-            f"🎯 *Your Current Challenge*\n\n"
-            f"*Challenge #{challenge['id']}: {challenge['name']}*\n"
-            f"{type_emoji} Type: {challenge_type}\n"
-            f"📍 Location: {challenge['location']}\n"
-            f"📝 {challenge['description']}\n\n"
-            f"ℹ️ {instructions}\n\n"
-        )
+        # Check if challenge is locked due to penalty
+        is_locked = False
+        penalty_info = None
+        if current_challenge_index > 0:  # Not the first challenge
+            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+            if unlock_time_str:
+                from datetime import datetime
+                unlock_time = datetime.fromisoformat(unlock_time_str)
+                now = datetime.now()
+                
+                if now < unlock_time:
+                    # Challenge is still locked
+                    is_locked = True
+                    time_remaining = unlock_time - now
+                    minutes = int(time_remaining.total_seconds() // 60)
+                    seconds = int(time_remaining.total_seconds() % 60)
+                    
+                    previous_challenge_id = challenge_id - 1
+                    hint_count = self.game_state.get_hint_count(team_name, previous_challenge_id)
+                    
+                    penalty_info = {
+                        'minutes': minutes,
+                        'seconds': seconds,
+                        'unlock_time': unlock_time,
+                        'hint_count': hint_count
+                    }
         
-        # Add hints information
-        hints = challenge.get('hints', [])
-        used_hints = self.game_state.get_used_hints(team_name, challenge['id'])
-        
-        if hints:
-            message += f"💡 Hints available: {len(hints)}\n"
-            message += f"💡 Hints used: {len(used_hints)}/{len(hints)}\n"
+        if is_locked and penalty_info:
+            # Show locked challenge message
+            message = (
+                f"⏱️ *Challenge Locked - Penalty Timeout*\n\n"
+                f"*Next Challenge: #{challenge_id}: {challenge['name']}*\n\n"
+                f"Your team used {penalty_info['hint_count']} hint(s) on the previous challenge.\n"
+                f"You must wait before this challenge is unlocked.\n\n"
+                f"⏳ Time remaining: {penalty_info['minutes']}m {penalty_info['seconds']}s\n\n"
+                f"The challenge will be available at:\n"
+                f"{penalty_info['unlock_time'].strftime('%H:%M:%S')}\n\n"
+                f"Once unlocked, you'll be able to view the full challenge details and submit your answer."
+            )
+        else:
+            # Show full challenge details
+            message = (
+                f"🎯 *Your Current Challenge*\n\n"
+                f"*Challenge #{challenge_id}: {challenge['name']}*\n"
+                f"{type_emoji} Type: {challenge_type}\n"
+                f"📍 Location: {challenge['location']}\n"
+                f"📝 {challenge['description']}\n\n"
+                f"ℹ️ {instructions}\n\n"
+            )
             
-            if used_hints:
-                message += "\n*Used Hints:*\n"
-                for hint_record in used_hints:
-                    hint_idx = hint_record['hint_index']
-                    if hint_idx < len(hints):
-                        message += f"  • {hints[hint_idx]}\n"
+            # Add hints information
+            hints = challenge.get('hints', [])
+            used_hints = self.game_state.get_used_hints(team_name, challenge_id)
             
-            if len(used_hints) < len(hints):
-                message += "\nUse /hint to get a hint (costs 2 min penalty)\n"
-        
-        message += "\nUse /submit [answer] to submit this challenge."
+            if hints:
+                message += f"💡 Hints available: {len(hints)}\n"
+                message += f"💡 Hints used: {len(used_hints)}/{len(hints)}\n"
+                
+                if used_hints:
+                    message += "\n*Used Hints:*\n"
+                    for hint_record in used_hints:
+                        hint_idx = hint_record['hint_index']
+                        if hint_idx < len(hints):
+                            message += f"  • {hints[hint_idx]}\n"
+                
+                if len(used_hints) < len(hints):
+                    message += "\nUse /hint to get a hint (costs 2 min penalty)\n"
+            
+            message += "\nUse /submit [answer] to submit this challenge."
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
