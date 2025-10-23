@@ -377,6 +377,11 @@ uCodeAmazingRace/
   - **Answer challenges**: Submit text answers which are auto-verified
   - **Trivia challenges**: Support multiple required keywords
 - Challenge instructions are displayed based on the challenge type
+- **Challenge Completion Broadcast**: When a team completes a challenge:
+  - All team members receive a notification (except the submitter)
+  - The admin receives a notification
+  - Message includes team name, challenge name, submitter, and progress
+  - Special congratulations message when team finishes all challenges
 
 ### Winning
 - The winner is the **first team to complete all challenges**
