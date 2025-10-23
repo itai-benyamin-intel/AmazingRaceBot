@@ -237,7 +237,7 @@ class AmazingRaceBot:
             "/jointeam <name> - Join an existing team\n"
             "/myteam - View your team information\n"
             "/leaderboard - View current standings\n"
-            "/challenges - View all challenges (sequential)\n"
+            "/challenges - View completed and current challenge\n"
             "/current_challenge - View your current challenge\n"
             "/submit [answer] - Submit current challenge\n"
             "/teams - List all teams\n"
@@ -408,12 +408,7 @@ class AmazingRaceBot:
                     f"   📝 {challenge['description']}\n"
                     f"   ℹ️ {instructions}\n\n"
                 )
-            else:
-                # Locked challenge
-                message += (
-                    f"🔒 *Challenge #{challenge['id']}:* LOCKED\n"
-                    f"   Complete previous challenges to unlock\n\n"
-                )
+            # Locked challenges are not shown anymore
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
