@@ -87,32 +87,51 @@ class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
         team = bot.game_state.teams["Team A"]
         self.assertEqual(len(team['completed_challenges']), 1)
         
-        # Verify broadcast was sent
-        # Should have been called twice: once for Bob (222222) and once for Charlie (333333)
-        # Alice (111111) is the submitter so they don't get the broadcast
-        # Admin (999999999) should also get the broadcast
-        self.assertEqual(context.bot.send_message.call_count, 3)
+        # Verify broadcasts were sent
+        # Should have been called 5 times:
+        # - Completion broadcast: Bob (222222), Charlie (333333), Admin (999999999)
+        # - Next challenge broadcast (no timeout): Bob (222222), Charlie (333333)
+        # Alice (111111) is the submitter so they don't get the next challenge broadcast
+        self.assertEqual(context.bot.send_message.call_count, 5)
         
         # Get all call arguments
         calls = context.bot.send_message.call_args_list
         sent_to_ids = [call[1]['chat_id'] for call in calls]
         
-        # Verify Bob, Charlie, and Admin received the broadcast
-        self.assertIn(222222, sent_to_ids)  # Bob
-        self.assertIn(333333, sent_to_ids)  # Charlie
-        self.assertIn(999999999, sent_to_ids)  # Admin
+        # Count messages per recipient
+        bob_messages = sent_to_ids.count(222222)
+        charlie_messages = sent_to_ids.count(333333)
+        admin_messages = sent_to_ids.count(999999999)
         
-        # Verify Alice (submitter) did NOT receive the broadcast
+        # Verify Bob and Charlie got 2 messages each (completion + next challenge)
+        self.assertEqual(bob_messages, 2)  # Bob: completion + next challenge
+        self.assertEqual(charlie_messages, 2)  # Charlie: completion + next challenge
+        # Admin got 1 message (completion only, not next challenge)
+        self.assertEqual(admin_messages, 1)  # Admin: completion only
+        
+        # Verify Alice (submitter) did NOT receive any broadcasts
         self.assertNotIn(111111, sent_to_ids)
         
-        # Verify the message content
-        for call_obj in calls:
-            message_text = call_obj[1]['text']
-            self.assertIn("Challenge Completed!", message_text)
+        # Verify the message content includes both completion and new challenge
+        completion_messages = [call[1]['text'] for call in calls if "Challenge Completed!" in call[1]['text']]
+        new_challenge_messages = [call[1]['text'] for call in calls if "New Challenge Available!" in call[1]['text']]
+        
+        # Should have 3 completion messages (Bob, Charlie, Admin)
+        self.assertEqual(len(completion_messages), 3)
+        # Should have 2 new challenge messages (Bob, Charlie - excluding Alice)
+        self.assertEqual(len(new_challenge_messages), 2)
+        
+        # Verify completion message content
+        for message_text in completion_messages:
             self.assertIn("Team A", message_text)
             self.assertIn("Challenge 1", message_text)
             self.assertIn("Alice", message_text)
             self.assertIn("1/2 challenges", message_text)
+        
+        # Verify new challenge message content
+        for message_text in new_challenge_messages:
+            self.assertIn("New Challenge Available!", message_text)
+            self.assertIn("Challenge #2", message_text)
     
     async def test_broadcast_includes_finish_message(self):
         """Test that broadcast includes finish message when team completes all challenges."""

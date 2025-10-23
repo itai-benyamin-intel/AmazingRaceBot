@@ -5,6 +5,7 @@ import logging
 import yaml
 import math
 from datetime import datetime
+from typing import Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, PhotoSize
 from telegram.ext import (
     Application,
@@ -201,6 +202,121 @@ class AmazingRaceBot:
             return "✅ This challenge is auto-verified."
         else:
             return "📝 Submit your response to complete this challenge."
+    
+    async def check_and_broadcast_unlocked_challenge(self, context: ContextTypes.DEFAULT_TYPE, 
+                                                     team_name: str) -> bool:
+        """Check if a challenge became unlocked and broadcast if we haven't already.
+        
+        Args:
+            context: Telegram context
+            team_name: Name of the team
+            
+        Returns:
+            True if a broadcast was sent, False otherwise
+        """
+        team_data = self.game_state.teams[team_name]
+        current_challenge_index = team_data.get('current_challenge_index', 0)
+        
+        # Check if all challenges are completed
+        if current_challenge_index >= len(self.challenges):
+            return False
+        
+        challenge = self.challenges[current_challenge_index]
+        challenge_id = challenge['id']
+        
+        # Only check for challenges after the first one
+        if current_challenge_index == 0:
+            return False
+        
+        # Check if there was a timeout that may have expired
+        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+        if not unlock_time_str:
+            return False
+        
+        unlock_time = datetime.fromisoformat(unlock_time_str)
+        now = datetime.now()
+        
+        # Check if timeout has expired
+        if now >= unlock_time:
+            # Check if we've already broadcast this unlock
+            broadcasts = team_data.get('challenge_unlock_broadcasts', {})
+            if str(challenge_id) not in broadcasts:
+                # Haven't broadcast yet - do it now
+                await self.broadcast_current_challenge(context, team_name)
+                
+                # Mark as broadcast
+                if 'challenge_unlock_broadcasts' not in team_data:
+                    team_data['challenge_unlock_broadcasts'] = {}
+                team_data['challenge_unlock_broadcasts'][str(challenge_id)] = datetime.now().isoformat()
+                self.game_state.save_state()
+                
+                return True
+        
+        return False
+    
+    async def broadcast_current_challenge(self, context: ContextTypes.DEFAULT_TYPE, 
+                                          team_name: str, exclude_user_id: Optional[int] = None):
+        """Broadcast current challenge details to team members.
+        
+        Args:
+            context: Telegram context
+            team_name: Name of the team
+            exclude_user_id: Optional user ID to exclude from broadcast (e.g., submitter)
+        """
+        team_data = self.game_state.teams[team_name]
+        current_challenge_index = team_data.get('current_challenge_index', 0)
+        
+        # Check if all challenges are completed
+        if current_challenge_index >= len(self.challenges):
+            return
+        
+        # Get current challenge
+        challenge = self.challenges[current_challenge_index]
+        challenge_id = challenge['id']
+        challenge_type = challenge.get('type', 'text')
+        type_emoji = self.get_challenge_type_emoji(challenge_type)
+        instructions = self.get_challenge_instructions(challenge)
+        
+        # Create broadcast message
+        broadcast_message = (
+            f"🎯 *New Challenge Available!*\n\n"
+            f"*Challenge #{challenge_id}: {challenge['name']}*\n"
+            f"{type_emoji} Type: {challenge_type}\n"
+            f"📍 Location: {challenge['location']}\n"
+            f"📝 {challenge['description']}\n\n"
+            f"ℹ️ {instructions}\n\n"
+        )
+        
+        # Add hints information
+        hints = challenge.get('hints', [])
+        used_hints = self.game_state.get_used_hints(team_name, challenge_id)
+        
+        if hints:
+            broadcast_message += f"💡 Hints available: {len(hints)}\n"
+            if len(used_hints) < len(hints):
+                broadcast_message += "Use /hint to get a hint (costs 2 min penalty)\n"
+        
+        broadcast_message += "\nUse /current to see full details.\nUse /submit [answer] to submit this challenge."
+        
+        # Broadcast to all team members
+        sent_to_users = set()
+        for member in team_data['members']:
+            member_id = member['id']
+            # Skip excluded user (e.g., the submitter who already got the message)
+            if exclude_user_id and member_id == exclude_user_id:
+                continue
+            if member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=broadcast_message,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+            except Exception as e:
+                logger.error(f"Failed to send challenge broadcast to user {member_id}: {e}")
     
     async def broadcast_challenge_completion(self, context: ContextTypes.DEFAULT_TYPE, 
                                             team_name: str, challenge_id: int, 
@@ -520,6 +636,9 @@ class AmazingRaceBot:
             await update.message.reply_text("You are not in any team yet! Use /createteam or /jointeam")
             return
         
+        # Check if a timeout just expired and broadcast if needed
+        await self.check_and_broadcast_unlocked_challenge(context, team_name)
+        
         team = self.game_state.teams[team_name]
         current_challenge_index = team.get('current_challenge_index', 0)
         
@@ -801,6 +920,9 @@ class AmazingRaceBot:
             await update.message.reply_text("You are not in any team!")
             return
         
+        # Check if a timeout just expired and broadcast if needed
+        await self.check_and_broadcast_unlocked_challenge(context, team_name)
+        
         # Get current challenge that should be completed
         team = self.game_state.teams[team_name]
         current_challenge_index = team.get('current_challenge_index', 0)
@@ -915,6 +1037,9 @@ class AmazingRaceBot:
                                 f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
                                 f"{unlock_time.strftime('%H:%M:%S')}"
                             )
+                        else:
+                            # No timeout - broadcast next challenge immediately to all team members
+                            await self.broadcast_current_challenge(context, team_name, user.id)
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
                     
@@ -1346,6 +1471,13 @@ class AmazingRaceBot:
                     parse_mode='Markdown'
                 )
                 
+                # Check if there's a penalty for the next challenge
+                has_timeout = False
+                if not team.get('finish_time'):
+                    next_challenge_id = challenge_id + 1
+                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                    has_timeout = unlock_time_str is not None
+                
                 # Notify team members
                 team_members = team['members']
                 for member in team_members:
@@ -1384,6 +1516,10 @@ class AmazingRaceBot:
                         )
                     except Exception as e:
                         logger.error(f"Failed to notify team member {member['id']}: {e}")
+                
+                # If no timeout, broadcast next challenge to all team members
+                if not has_timeout and not team.get('finish_time'):
+                    await self.broadcast_current_challenge(context, team_name)
                 
                 # Broadcast completion to team and admin (excluding the notified members)
                 await self.broadcast_challenge_completion(
