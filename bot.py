@@ -387,25 +387,54 @@ class AmazingRaceBot:
             f"🏁 Welcome to {self.config['game']['name']}! 🏁\n\n"
             "This is an interactive Amazing Race game.\n"
             "Complete challenges sequentially to win!\n\n"
-            "Available commands:\n"
-            "/help - Show all commands\n"
-            "/createteam <team_name> - Create a new team\n"
-            "/jointeam <team_name> - Join an existing team\n"
-            "/myteam - View your team info\n"
-            "/leaderboard - View current standings\n"
-            "/challenges - View challenges\n"
-            "/current - View your current challenge\n"
-            "/hint - Get a hint (costs 2 min penalty)\n"
-            "/submit [answer] - Submit current challenge\n"
-            "/contact - Contact the bot admin\n\n"
-            "Admin commands:\n"
-            "/startgame - Start the game\n"
-            "/endgame - End the game\n"
-            "/reset - Reset the game\n"
-            "/togglelocation - Toggle location verification (admin)\n\n"
-            "Good luck! 🎯"
         )
-        await update.message.reply_text(welcome_message)
+        
+        user = update.effective_user
+        team_name = self.game_state.get_team_by_user(user.id)
+        
+        # Check player state and provide context-aware help
+        if not team_name:
+            # Player has no team
+            help_text = (
+                "You're not part of a team yet. Here's how to get started:\n\n"
+                "🆕 *Create a new team:*\n"
+                "Use `/createteam <team_name>` to create a team\n"
+                "Example: `/createteam Awesome Team`\n\n"
+                "👥 *Join an existing team:*\n"
+                "Use `/jointeam <team_name>` to join a team\n"
+                "Example: `/jointeam Awesome Team`\n\n"
+                "📋 You can also use the menu button below to see all available commands."
+            )
+        elif not self.game_state.game_started:
+            # Player has team but game hasn't started
+            help_text = (
+                "⏳ *Waiting for Game to Start*\n\n"
+                "You're all set! Your team is ready to go.\n\n"
+                "The game will begin once the admin starts it.\n"
+                "While you wait, you can:\n\n"
+                "👥 `/myteam` - View your team members\n"
+                "🏆 `/leaderboard` - See all registered teams\n\n"
+                "📋 Use the menu button below to see all available commands."
+            )
+        else:
+            # Game has started
+            help_text = (
+                "🎯 *How to Play*\n\n"
+                "The game is in progress! Here's how to navigate:\n\n"
+                "📍 *View your current challenge:*\n"
+                "Use `/current` to see details of your current challenge\n\n"
+                "📊 *Check your progress:*\n"
+                "Use `/challenges` to see completed and current challenges\n\n"
+                "✅ *Submit your answer:*\n"
+                "Use `/submit [answer]` for text answers\n"
+                "Use `/submit` for photo challenges\n\n"
+                "💡 *Need help?*\n"
+                "Use `/hint` to get a hint (costs 2 min penalty)\n\n"
+                "📋 Use the menu button below to see all available commands."
+            )
+        
+        full_message = welcome_message + help_text
+        await update.message.reply_text(full_message, parse_mode='Markdown')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /help command with context-aware messages."""
