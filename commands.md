@@ -21,6 +21,7 @@ jointeam - Join an existing team (usage: /jointeam <team_name>)
 myteam - View your team information and progress
 challenges - View completed and current challenge
 current_challenge - View your current challenge
+hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge (usage: /submit [answer])
 leaderboard - View current team standings
 teams - List all teams
@@ -51,6 +52,7 @@ jointeam - Join an existing team
 myteam - View your team information and progress
 challenges - View completed and current challenge
 current_challenge - View your current challenge
+hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge
 leaderboard - View current team standings
 teams - List all teams

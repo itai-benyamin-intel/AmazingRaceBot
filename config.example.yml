@@ -48,6 +48,12 @@ game:
         latitude: 37.7749
         longitude: -122.4194
         radius: 100  # Verification radius in meters (default: 100m)
+      # Optional: Hints (up to 3 hints per challenge)
+      # Each hint costs 2 minutes penalty when the next challenge is unlocked
+      hints:
+        - "Look for the tallest building in the area"
+        - "The viewpoint is near the waterfront"
+        - "Check the tourist information center for directions"
       
     - id: 2
       name: "Riddle Master"
@@ -61,6 +67,9 @@ game:
         latitude: 37.7849
         longitude: -122.4094
         radius: 100
+      hints:
+        - "Think about where students study"
+        - "It's a building full of books"
       
     - id: 3
       name: "Code Debug"

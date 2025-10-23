@@ -17,6 +17,7 @@ class GameState:
         self.game_started: bool = False
         self.game_ended: bool = False
         self.location_verification_enabled: bool = False
+        self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
         self.load_state()
     
     def load_state(self):
@@ -30,6 +31,7 @@ class GameState:
                     self.game_started = data.get('game_started', False)
                     self.game_ended = data.get('game_ended', False)
                     self.location_verification_enabled = data.get('location_verification_enabled', False)
+                    self.hint_usage = data.get('hint_usage', {})
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -41,7 +43,8 @@ class GameState:
                 'challenges': self.challenges,
                 'game_started': self.game_started,
                 'game_ended': self.game_ended,
-                'location_verification_enabled': self.location_verification_enabled
+                'location_verification_enabled': self.location_verification_enabled,
+                'hint_usage': self.hint_usage
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -114,6 +117,9 @@ class GameState:
         self.teams[team_name]['completed_challenges'].append(challenge_id)
         self.teams[team_name]['current_challenge_index'] += 1
         
+        # Record completion time for penalty tracking
+        self.set_challenge_completion_time(team_name, challenge_id)
+        
         # Store submission data if provided
         if submission_data:
             if 'challenge_submissions' not in self.teams[team_name]:
@@ -171,6 +177,7 @@ class GameState:
         self.game_started = False
         self.game_ended = False
         self.location_verification_enabled = False
+        self.hint_usage = {}
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 
@@ -270,3 +277,135 @@ class GameState:
         """
         self.location_verification_enabled = enabled
         self.save_state()
+    
+    def use_hint(self, team_name: str, challenge_id: int, hint_index: int, user_id: int, user_name: str) -> bool:
+        """Record hint usage for a team's challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            hint_index: Index of the hint (0, 1, or 2)
+            user_id: ID of the user requesting the hint
+            user_name: Name of the user requesting the hint
+            
+        Returns:
+            True if hint was recorded, False otherwise
+        """
+        if team_name not in self.teams:
+            return False
+        
+        # Initialize hint_usage for team if not exists
+        if team_name not in self.hint_usage:
+            self.hint_usage[team_name] = {}
+        
+        # Initialize challenge hints if not exists
+        challenge_key = str(challenge_id)
+        if challenge_key not in self.hint_usage[team_name]:
+            self.hint_usage[team_name][challenge_key] = []
+        
+        # Record the hint usage
+        self.hint_usage[team_name][challenge_key].append({
+            'hint_index': hint_index,
+            'user_id': user_id,
+            'user_name': user_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        self.save_state()
+        return True
+    
+    def get_used_hints(self, team_name: str, challenge_id: int) -> List[Dict]:
+        """Get list of hints used for a challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            List of hint usage records
+        """
+        if team_name not in self.hint_usage:
+            return []
+        
+        challenge_key = str(challenge_id)
+        return self.hint_usage.get(team_name, {}).get(challenge_key, [])
+    
+    def get_hint_count(self, team_name: str, challenge_id: int) -> int:
+        """Get number of hints used for a challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Number of hints used
+        """
+        return len(self.get_used_hints(team_name, challenge_id))
+    
+    def get_total_penalty_time(self, team_name: str, challenge_id: int) -> int:
+        """Get total penalty time in seconds for hints used on a challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Total penalty time in seconds (2 minutes per hint)
+        """
+        hint_count = self.get_hint_count(team_name, challenge_id)
+        return hint_count * 120  # 2 minutes = 120 seconds per hint
+    
+    def set_challenge_completion_time(self, team_name: str, challenge_id: int) -> None:
+        """Set the completion time for a challenge (used for penalty timing).
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+        """
+        if team_name not in self.teams:
+            return
+        
+        if 'challenge_completion_times' not in self.teams[team_name]:
+            self.teams[team_name]['challenge_completion_times'] = {}
+        
+        self.teams[team_name]['challenge_completion_times'][str(challenge_id)] = datetime.now().isoformat()
+        self.save_state()
+    
+    def get_challenge_unlock_time(self, team_name: str, challenge_id: int) -> Optional[str]:
+        """Get the time when a challenge will be unlocked (after penalty).
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge (the one being unlocked)
+            
+        Returns:
+            ISO format timestamp when challenge unlocks, or None if no penalty
+        """
+        if team_name not in self.teams:
+            return None
+        
+        # Get the previous challenge ID
+        previous_challenge_id = challenge_id - 1
+        if previous_challenge_id < 1:
+            return None
+        
+        # Get completion time of previous challenge
+        completion_times = self.teams[team_name].get('challenge_completion_times', {})
+        completion_time_str = completion_times.get(str(previous_challenge_id))
+        
+        if not completion_time_str:
+            return None
+        
+        # Get penalty time for previous challenge
+        penalty_seconds = self.get_total_penalty_time(team_name, previous_challenge_id)
+        
+        if penalty_seconds == 0:
+            return None
+        
+        # Calculate unlock time
+        from datetime import datetime, timedelta
+        completion_time = datetime.fromisoformat(completion_time_str)
+        unlock_time = completion_time + timedelta(seconds=penalty_seconds)
+        
+        return unlock_time.isoformat()
+
