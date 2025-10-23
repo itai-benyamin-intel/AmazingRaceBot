@@ -102,8 +102,8 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Correct!", call_args)
         self.assertIn("Challenge 1", call_args)
     
-    async def test_submit_with_challenge_id_answer_challenge(self):
-        """Test submit command with challenge_id for answer challenge (backward compatibility)."""
+    async def test_submit_with_number_as_answer(self):
+        """Test submit command with a number as answer (no backward compatibility)."""
         with open(self.test_config_file, 'w') as f:
             yaml.dump(self.config, f)
         
@@ -122,19 +122,23 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         update.message.reply_text = AsyncMock()
         
         context = MagicMock()
-        context.args = ['1', 'test1']  # Challenge ID and answer
+        context.args = ['1']  # Number treated as answer, not challenge_id
         context.bot_data = {}
         
         # Call submit_command
         await bot.submit_command(update, context)
         
-        # Verify challenge was completed
+        # Verify challenge was NOT completed (wrong answer)
         team = bot.game_state.teams["Team A"]
-        self.assertEqual(len(team['completed_challenges']), 1)
-        self.assertIn(1, team['completed_challenges'])
+        self.assertEqual(len(team['completed_challenges']), 0)
+        
+        # Verify incorrect answer message
+        update.message.reply_text.assert_called()
+        call_args = update.message.reply_text.call_args[0][0]
+        self.assertIn("Incorrect", call_args)
     
-    async def test_submit_wrong_challenge_id(self):
-        """Test submit command with wrong challenge_id."""
+    async def test_submit_without_answer_requests_answer(self):
+        """Test submit command without answer requests it in a message."""
         with open(self.test_config_file, 'w') as f:
             yaml.dump(self.config, f)
         
@@ -152,7 +156,7 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         update.message.reply_text = AsyncMock()
         
         context = MagicMock()
-        context.args = ['2', 'test2']  # Wrong challenge (should be 1)
+        context.args = []  # No answer provided
         context.bot_data = {}
         
         # Call submit_command
@@ -162,11 +166,10 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         team = bot.game_state.teams["Team A"]
         self.assertEqual(len(team['completed_challenges']), 0)
         
-        # Verify error message
+        # Verify message requests answer
         update.message.reply_text.assert_called()
         call_args = update.message.reply_text.call_args[0][0]
-        self.assertIn("must complete challenges in order", call_args)
-        self.assertIn("#1", call_args)
+        self.assertIn("Please provide your answer", call_args)
     
     async def test_submit_without_args_photo_challenge(self):
         """Test submit command without args for photo challenge."""

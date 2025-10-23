@@ -475,41 +475,15 @@ class AmazingRaceBot:
         
         # Get current challenge that should be completed
         team = self.game_state.teams[team_name]
-        expected_challenge_id = team.get('current_challenge_index', 0) + 1
+        current_challenge_index = team.get('current_challenge_index', 0)
         
-        # Determine challenge_id (use current challenge if not provided)
-        challenge_id = None
-        answer_offset = 0  # Offset for answer in context.args
-        
-        if context.args:
-            # Check if first arg is a number (challenge_id) or text (answer)
-            try:
-                challenge_id = int(context.args[0])
-                answer_offset = 1
-                # Verify the provided challenge_id matches expected
-                if challenge_id != expected_challenge_id:
-                    if challenge_id in team['completed_challenges']:
-                        await update.message.reply_text("This challenge was already completed by your team!")
-                    else:
-                        await update.message.reply_text(
-                            f"You must complete challenges in order!\n"
-                            f"Your current challenge is #{expected_challenge_id}.\n"
-                            f"Use /submit [answer] to submit it."
-                        )
-                    return
-            except ValueError:
-                # First arg is not a number, treat it as answer
-                challenge_id = expected_challenge_id
-                answer_offset = 0
-        else:
-            # No args, use current challenge
-            challenge_id = expected_challenge_id
-        
-        # Find challenge
-        challenge = next((c for c in self.challenges if c['id'] == challenge_id), None)
-        if not challenge:
-            await update.message.reply_text("Challenge not found!")
+        # Always use the current challenge
+        if current_challenge_index >= len(self.challenges):
+            await update.message.reply_text("🏆 Your team has completed all challenges!")
             return
+        
+        challenge = self.challenges[current_challenge_index]
+        challenge_id = challenge['id']
         
         # Check location verification for challenges 2 onwards (if enabled)
         if self.game_state.location_verification_enabled and challenge_id > 1:
@@ -537,14 +511,14 @@ class AmazingRaceBot:
         # Handle different verification methods
         if method == 'answer':
             # Text answer verification
-            if len(context.args) <= answer_offset:
+            if not context.args:
                 await update.message.reply_text(
                     f"Please provide your answer:\n"
                     f"/submit <your answer>"
                 )
                 return
             
-            user_answer = ' '.join(context.args[answer_offset:])
+            user_answer = ' '.join(context.args)
             
             if self.verify_answer(challenge, user_answer):
                 # Answer is correct
