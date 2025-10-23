@@ -50,14 +50,15 @@ class AmazingRaceBot:
         """Handle the /start command."""
         welcome_message = (
             f"🏁 Welcome to {self.config['game']['name']}! 🏁\n\n"
-            "This is an interactive Amazing Race game.\n\n"
+            "This is an interactive Amazing Race game.\n"
+            "Complete challenges sequentially to win!\n\n"
             "Available commands:\n"
             "/help - Show all commands\n"
             "/createteam <team_name> - Create a new team\n"
             "/jointeam <team_name> - Join an existing team\n"
             "/myteam - View your team info\n"
             "/leaderboard - View current standings\n"
-            "/challenges - View all challenges\n"
+            "/challenges - View challenges\n"
             "/submit <challenge_id> - Submit a challenge completion\n\n"
             "Admin commands:\n"
             "/startgame - Start the game\n"
@@ -77,13 +78,17 @@ class AmazingRaceBot:
             "/jointeam <name> - Join an existing team\n"
             "/myteam - View your team information\n"
             "/leaderboard - View current standings\n"
-            "/challenges - View all challenges\n"
-            "/submit <challenge_id> - Submit challenge completion\n\n"
+            "/challenges - View challenges (sequential)\n"
+            "/submit <challenge_id> - Submit challenge completion\n"
+            "/teams - List all teams\n\n"
             "*Admin Commands:*\n"
             "/startgame - Start the game\n"
             "/endgame - End the game\n"
             "/reset - Reset all game data\n"
-            "/teams - List all teams\n"
+            "/teamstatus - View detailed team status\n"
+            "/addteam <name> - Create a team (admin)\n"
+            "/editteam <old> <new> - Rename a team\n"
+            "/removeteam <name> - Remove a team\n"
         )
         await update.message.reply_text(help_text, parse_mode='Markdown')
     
@@ -159,11 +164,18 @@ class AmazingRaceBot:
         members_list = '\n'.join([f"  • {m['name']}" for m in team['members']])
         completed = len(team['completed_challenges'])
         total = len(self.challenges)
+        current_challenge = team.get('current_challenge_index', 0) + 1
+        
+        status = ""
+        if team.get('finish_time'):
+            status = f"✅ *FINISHED!* at {team['finish_time']}\n"
+        elif completed < total:
+            status = f"🎯 *Current Challenge:* #{current_challenge}\n"
         
         message = (
             f"👥 *Team: {team_name}*\n\n"
-            f"🏆 Score: {team['score']} points\n"
-            f"📊 Challenges: {completed}/{total} completed\n\n"
+            f"{status}"
+            f"📊 Progress: {completed}/{total} challenges completed\n\n"
             f"*Members:*\n{members_list}"
         )
         
@@ -178,9 +190,22 @@ class AmazingRaceBot:
             return
         
         message = "🏆 *Leaderboard* 🏆\n\n"
-        for i, (team_name, score) in enumerate(leaderboard, 1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            message += f"{medal} *{team_name}* - {score} points\n"
+        
+        finished_teams = [t for t in leaderboard if t[2] is not None]
+        racing_teams = [t for t in leaderboard if t[2] is None]
+        
+        if finished_teams:
+            message += "*Finished Teams:*\n"
+            for i, (team_name, completed, finish_time) in enumerate(finished_teams, 1):
+                medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                message += f"{medal} *{team_name}* - Finished!\n"
+            message += "\n"
+        
+        if racing_teams:
+            message += "*Still Racing:*\n"
+            for team_name, completed, _ in racing_teams:
+                total = len(self.challenges)
+                message += f"🏃 *{team_name}* - {completed}/{total} challenges\n"
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
@@ -190,18 +215,36 @@ class AmazingRaceBot:
         team_name = self.game_state.get_team_by_user(user.id)
         
         completed_challenges = []
+        current_challenge_index = 0
+        
         if team_name:
-            completed_challenges = self.game_state.teams[team_name]['completed_challenges']
+            team = self.game_state.teams[team_name]
+            completed_challenges = team['completed_challenges']
+            current_challenge_index = team.get('current_challenge_index', 0)
         
         message = "🎯 *Challenges* 🎯\n\n"
-        for challenge in self.challenges:
-            status = "✅" if challenge['id'] in completed_challenges else "⭕"
-            message += (
-                f"{status} *Challenge #{challenge['id']}: {challenge['name']}*\n"
-                f"   📍 Location: {challenge['location']}\n"
-                f"   📝 {challenge['description']}\n"
-                f"   🏆 Points: {challenge['points']}\n\n"
-            )
+        
+        for i, challenge in enumerate(self.challenges):
+            if i < current_challenge_index:
+                # Completed challenge
+                message += (
+                    f"✅ *Challenge #{challenge['id']}: {challenge['name']}*\n"
+                    f"   📍 Location: {challenge['location']}\n"
+                    f"   📝 {challenge['description']}\n\n"
+                )
+            elif i == current_challenge_index:
+                # Current challenge (unlocked)
+                message += (
+                    f"🎯 *Challenge #{challenge['id']}: {challenge['name']}* (CURRENT)\n"
+                    f"   📍 Location: {challenge['location']}\n"
+                    f"   📝 {challenge['description']}\n\n"
+                )
+            else:
+                # Locked challenge
+                message += (
+                    f"🔒 *Challenge #{challenge['id']}:* LOCKED\n"
+                    f"   Complete previous challenges to unlock\n\n"
+                )
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
@@ -239,17 +282,43 @@ class AmazingRaceBot:
             await update.message.reply_text("Challenge not found!")
             return
         
+        # Get current challenge that should be completed
+        team = self.game_state.teams[team_name]
+        expected_challenge_id = team.get('current_challenge_index', 0) + 1
+        
+        # Check if this is the correct challenge to complete
+        if challenge_id != expected_challenge_id:
+            if challenge_id in team['completed_challenges']:
+                await update.message.reply_text("This challenge was already completed by your team!")
+            else:
+                await update.message.reply_text(
+                    f"You must complete challenges in order!\n"
+                    f"Your current challenge is #{expected_challenge_id}."
+                )
+            return
+        
         # Complete challenge
-        if self.game_state.complete_challenge(team_name, challenge_id, challenge['points']):
-            await update.message.reply_text(
+        if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges)):
+            team = self.game_state.teams[team_name]
+            completed = len(team['completed_challenges'])
+            total = len(self.challenges)
+            
+            response = (
                 f"🎉 Congratulations! Team '{team_name}' completed:\n"
                 f"*{challenge['name']}*\n"
-                f"Points earned: {challenge['points']}\n"
-                f"Total score: {self.game_state.teams[team_name]['score']}",
-                parse_mode='Markdown'
+                f"Progress: {completed}/{total} challenges"
             )
+            
+            # Check if team finished all challenges
+            if team.get('finish_time'):
+                response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+                response += f"Your team finished the race!\n"
+                response += f"Finish time: {team['finish_time']}"
+            
+            await update.message.reply_text(response, parse_mode='Markdown')
         else:
-            await update.message.reply_text("This challenge was already completed by your team!")
+            await update.message.reply_text("Error completing challenge. Please try again.")
+    
     
     async def start_game_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /startgame command (admin only)."""
@@ -288,11 +357,24 @@ class AmazingRaceBot:
         leaderboard = self.game_state.get_leaderboard()
         message = "🏁 *GAME OVER!* 🏁\n\n*Final Standings:*\n\n"
         
-        for i, (team_name, score) in enumerate(leaderboard, 1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            message += f"{medal} *{team_name}* - {score} points\n"
+        finished_teams = [t for t in leaderboard if t[2] is not None]
+        racing_teams = [t for t in leaderboard if t[2] is None]
         
-        message += "\n🎉 Congratulations to all teams! 🎉"
+        if finished_teams:
+            message += "*Finished Teams:*\n"
+            for i, (team_name, completed, finish_time) in enumerate(finished_teams, 1):
+                medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                message += f"{medal} *{team_name}* - Completed all challenges!\n"
+            message += "\n"
+        
+        if racing_teams:
+            message += "*Did Not Finish:*\n"
+            for team_name, completed, _ in racing_teams:
+                total = len(self.challenges)
+                message += f"   *{team_name}* - {completed}/{total} challenges\n"
+            message += "\n"
+        
+        message += "🎉 Congratulations to all teams! 🎉"
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def reset_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -312,14 +394,120 @@ class AmazingRaceBot:
             return
         
         message = "👥 *Teams* 👥\n\n"
+        total_challenges = len(self.challenges)
+        
         for team_name, team_data in self.game_state.teams.items():
+            completed = len(team_data['completed_challenges'])
+            status = "✅ FINISHED" if team_data.get('finish_time') else f"{completed}/{total_challenges}"
             message += (
                 f"*{team_name}*\n"
                 f"  Members: {len(team_data['members'])}/{self.config['game']['max_team_size']}\n"
-                f"  Score: {team_data['score']} points\n\n"
+                f"  Progress: {status}\n\n"
             )
         
         await update.message.reply_text(message, parse_mode='Markdown')
+    
+    async def teamstatus_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /teamstatus command (admin only) - detailed team info."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can view detailed team status!")
+            return
+        
+        if not self.game_state.teams:
+            await update.message.reply_text("No teams created yet!")
+            return
+        
+        message = "📊 *Detailed Team Status* 📊\n\n"
+        total_challenges = len(self.challenges)
+        
+        for team_name, team_data in self.game_state.teams.items():
+            completed = len(team_data['completed_challenges'])
+            current_challenge = team_data.get('current_challenge_index', 0) + 1
+            members_list = ', '.join([m['name'] for m in team_data['members']])
+            
+            message += f"*{team_name}*\n"
+            message += f"  👥 Members ({len(team_data['members'])}): {members_list}\n"
+            message += f"  👑 Captain: {team_data['captain_name']}\n"
+            message += f"  📊 Progress: {completed}/{total_challenges}\n"
+            
+            if team_data.get('finish_time'):
+                message += f"  ✅ Status: FINISHED at {team_data['finish_time']}\n"
+            else:
+                message += f"  🎯 Current Challenge: #{current_challenge}\n"
+            
+            message += "\n"
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
+    
+    async def editteam_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /editteam command (admin only)."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can edit teams!")
+            return
+        
+        if len(context.args) < 2:
+            await update.message.reply_text(
+                "Usage: /editteam <old_team_name> <new_team_name>\n"
+                "Example: /editteam \"Team A\" \"Super Team A\""
+            )
+            return
+        
+        old_name = context.args[0]
+        new_name = ' '.join(context.args[1:])
+        
+        if self.game_state.update_team(old_name, new_team_name=new_name):
+            await update.message.reply_text(f"✅ Team renamed from '{old_name}' to '{new_name}'")
+        else:
+            await update.message.reply_text(f"❌ Failed to rename team. Team '{old_name}' may not exist or '{new_name}' already exists.")
+    
+    async def addteam_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /addteam command (admin only)."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can add teams!")
+            return
+        
+        if not context.args:
+            await update.message.reply_text("Usage: /addteam <team_name>")
+            return
+        
+        team_name = ' '.join(context.args)
+        
+        # Check max teams
+        if len(self.game_state.teams) >= self.config['game']['max_teams']:
+            await update.message.reply_text("Maximum number of teams reached!")
+            return
+        
+        # Create team with admin as temporary captain (ID: 0)
+        if self.game_state.create_team(team_name, 0, "Admin"):
+            await update.message.reply_text(
+                f"✅ Team '{team_name}' created successfully!\n"
+                f"Note: This is an admin-created team. You can add members using:\n"
+                f"Players can join with /jointeam {team_name}"
+            )
+        else:
+            await update.message.reply_text(f"Team '{team_name}' already exists!")
+    
+    async def removeteam_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /removeteam command (admin only)."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can remove teams!")
+            return
+        
+        if not context.args:
+            await update.message.reply_text("Usage: /removeteam <team_name>")
+            return
+        
+        team_name = ' '.join(context.args)
+        
+        if self.game_state.remove_team(team_name):
+            await update.message.reply_text(f"✅ Team '{team_name}' has been removed.")
+        else:
+            await update.message.reply_text(f"❌ Team '{team_name}' not found!")
+    
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -345,6 +533,10 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("endgame", self.end_game_command))
         application.add_handler(CommandHandler("reset", self.reset_command))
         application.add_handler(CommandHandler("teams", self.teams_command))
+        application.add_handler(CommandHandler("teamstatus", self.teamstatus_command))
+        application.add_handler(CommandHandler("addteam", self.addteam_command))
+        application.add_handler(CommandHandler("editteam", self.editteam_command))
+        application.add_handler(CommandHandler("removeteam", self.removeteam_command))
         
         # Add error handler
         application.add_error_handler(self.error_handler)
