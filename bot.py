@@ -413,7 +413,7 @@ class AmazingRaceBot:
                 "The game will begin once the admin starts it.\n"
                 "While you wait, you can:\n\n"
                 "👥 `/myteam` - View your team members\n"
-                "🏆 `/leaderboard` - See all registered teams\n\n"
+                "🏆 `/teams` - See all registered teams\n\n"
                 "📋 Use the menu button below to see all available commands."
             )
         else:
@@ -463,7 +463,7 @@ class AmazingRaceBot:
                 "The game will begin once the admin starts it.\n"
                 "While you wait, you can:\n\n"
                 "👥 `/myteam` - View your team members\n"
-                "🏆 `/leaderboard` - See all registered teams\n\n"
+                "🏆 `/teams` - See all registered teams\n\n"
                 "📋 Use the menu button below to see all available commands."
             )
         else:
@@ -589,7 +589,12 @@ class AmazingRaceBot:
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def leaderboard_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /leaderboard command."""
+        """Handle the /leaderboard command (admin only)."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can view the leaderboard during the game!\nYou can view teams using /teams")
+            return
+        
         leaderboard = self.game_state.get_leaderboard()
         
         if not leaderboard:
@@ -1269,22 +1274,27 @@ class AmazingRaceBot:
         await update.message.reply_text("✅ Game has been reset! All data cleared.")
     
     async def teams_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /teams command."""
+        """Handle the /teams command - shows teams without progress information."""
         if not self.game_state.teams:
             await update.message.reply_text("No teams created yet!")
             return
         
         message = "👥 *Teams* 👥\n\n"
-        total_challenges = len(self.challenges)
         
         for team_name, team_data in self.game_state.teams.items():
-            completed = len(team_data['completed_challenges'])
-            status = "✅ FINISHED" if team_data.get('finish_time') else f"{completed}/{total_challenges}"
-            message += (
-                f"*{team_name}*\n"
-                f"  Members: {len(team_data['members'])}/{self.config['game']['max_team_size']}\n"
-                f"  Progress: {status}\n\n"
-            )
+            captain_name = team_data.get('captain_name', 'Unknown')
+            members_names = [m['name'] for m in team_data['members']]
+            other_members = [name for name in members_names if name != captain_name]
+            
+            message += f"*{team_name}*\n"
+            message += f"  👑 Captain: {captain_name}\n"
+            
+            if other_members:
+                message += f"  👥 Members: {', '.join(other_members)}\n"
+            else:
+                message += f"  👥 Members: None\n"
+            
+            message += f"  Total: {len(team_data['members'])}/{self.config['game']['max_team_size']}\n\n"
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
