@@ -57,8 +57,9 @@ telegram:
 
 5. Customize the challenges and game settings in `config.yml`
 
-6. Add your Telegram user ID to the admins list in `config.yml`:
+6. Add your Telegram user ID to the admin field in `config.yml`:
    - To find your user ID, message [@userinfobot](https://t.me/userinfobot) on Telegram
+   - Note: Only one admin is supported
 
 ### Running the Bot
 
@@ -81,6 +82,7 @@ The bot will start and be ready to receive commands!
 - `/submit <challenge_id>` - Submit a completed challenge
 - `/leaderboard` - View current team standings
 - `/teams` - List all teams
+- `/contact` - Contact the bot admin
 
 ### Admin Commands
 
@@ -165,11 +167,13 @@ uCodeAmazingRace/
 - No points system - it's a race to finish!
 
 ### Admin Controls
-- Only users listed in the `admins` section can use admin commands
+- Only one user can be configured as the admin in the `admin` field
+- The bot supports backward compatibility with the old `admins` list format (uses first admin only)
 - Admins can start/end the game and reset state
 - Admins can view detailed team status with `/teamstatus`
 - Admins can manage teams (add, edit, remove)
 - The game must be started before teams can submit challenges
+- Players can contact the admin using the `/contact` command
 
 ## Customization
 

@@ -32,6 +32,6 @@ game:
       description: "Race to the finish line"
       location: "Starting Point"
 
-# Admin users (Telegram user IDs)
-admins:
-  - 123456789  # Replace with actual admin user IDs
+# Admin user (Telegram user ID)
+# Note: Only one admin is allowed
+admin: 123456789  # Replace with actual admin user ID

@@ -30,7 +30,14 @@ class AmazingRaceBot:
         self.config = self.load_config(config_file)
         self.game_state = GameState()
         self.challenges = self.config['game']['challenges']
-        self.admins = set(self.config.get('admins', []))
+        # Support both single admin (new) and list of admins (backward compatibility)
+        admin_config = self.config.get('admin') or self.config.get('admins', [])
+        if isinstance(admin_config, list):
+            # Legacy format: list of admins - only use the first one
+            self.admin_id = admin_config[0] if admin_config else None
+        else:
+            # New format: single admin ID
+            self.admin_id = admin_config
     
     @staticmethod
     def load_config(config_file: str) -> dict:
@@ -44,7 +51,7 @@ class AmazingRaceBot:
     
     def is_admin(self, user_id: int) -> bool:
         """Check if user is an admin."""
-        return user_id in self.admins
+        return self.admin_id is not None and user_id == self.admin_id
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /start command."""
@@ -59,7 +66,8 @@ class AmazingRaceBot:
             "/myteam - View your team info\n"
             "/leaderboard - View current standings\n"
             "/challenges - View challenges\n"
-            "/submit <challenge_id> - Submit a challenge completion\n\n"
+            "/submit <challenge_id> - Submit a challenge completion\n"
+            "/contact - Contact the bot admin\n\n"
             "Admin commands:\n"
             "/startgame - Start the game\n"
             "/endgame - End the game\n"
@@ -80,7 +88,8 @@ class AmazingRaceBot:
             "/leaderboard - View current standings\n"
             "/challenges - View challenges (sequential)\n"
             "/submit <challenge_id> - Submit challenge completion\n"
-            "/teams - List all teams\n\n"
+            "/teams - List all teams\n"
+            "/contact - Contact the bot admin\n\n"
             "*Admin Commands:*\n"
             "/startgame - Start the game\n"
             "/endgame - End the game\n"
@@ -508,6 +517,26 @@ class AmazingRaceBot:
         else:
             await update.message.reply_text(f"❌ Team '{team_name}' not found!")
     
+    async def contact_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /contact command - directs users to contact the admin."""
+        if self.admin_id is None:
+            await update.message.reply_text(
+                "❌ No admin is configured for this bot.\n"
+                "Please contact the bot operator."
+            )
+            return
+        
+        # Create a deep link to start a chat with the admin
+        admin_link = f"tg://user?id={self.admin_id}"
+        
+        await update.message.reply_text(
+            f"📞 *Contact Admin*\n\n"
+            f"To contact the bot admin, click the link below:\n"
+            f"[Contact Admin]({admin_link})\n\n"
+            f"Or search for the admin using their user ID: `{self.admin_id}`",
+            parse_mode='Markdown'
+        )
+    
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -529,6 +558,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("leaderboard", self.leaderboard_command))
         application.add_handler(CommandHandler("challenges", self.challenges_command))
         application.add_handler(CommandHandler("submit", self.submit_command))
+        application.add_handler(CommandHandler("contact", self.contact_command))
         application.add_handler(CommandHandler("startgame", self.start_game_command))
         application.add_handler(CommandHandler("endgame", self.end_game_command))
         application.add_handler(CommandHandler("reset", self.reset_command))
