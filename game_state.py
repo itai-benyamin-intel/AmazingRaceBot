@@ -79,8 +79,19 @@ class GameState:
         self.save_state()
         return True
     
-    def complete_challenge(self, team_name: str, challenge_id: int, total_challenges: int) -> bool:
-        """Mark a challenge as completed for a team. Challenges must be completed sequentially."""
+    def complete_challenge(self, team_name: str, challenge_id: int, total_challenges: int, 
+                          submission_data: Optional[Dict] = None) -> bool:
+        """Mark a challenge as completed for a team. Challenges must be completed sequentially.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge to complete
+            total_challenges: Total number of challenges in the game
+            submission_data: Optional data about the submission (e.g., answer, photo_id, timestamp)
+        
+        Returns:
+            True if challenge was successfully completed, False otherwise
+        """
         if team_name not in self.teams:
             return False
         
@@ -99,6 +110,12 @@ class GameState:
         
         self.teams[team_name]['completed_challenges'].append(challenge_id)
         self.teams[team_name]['current_challenge_index'] += 1
+        
+        # Store submission data if provided
+        if submission_data:
+            if 'challenge_submissions' not in self.teams[team_name]:
+                self.teams[team_name]['challenge_submissions'] = {}
+            self.teams[team_name]['challenge_submissions'][str(challenge_id)] = submission_data
         
         # Check if team finished all challenges
         if len(self.teams[team_name]['completed_challenges']) >= total_challenges:

@@ -3,7 +3,8 @@ Telegram Amazing Race Bot - Main bot implementation
 """
 import logging
 import yaml
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from datetime import datetime
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, PhotoSize
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -52,6 +53,83 @@ class AmazingRaceBot:
     def is_admin(self, user_id: int) -> bool:
         """Check if user is an admin."""
         return self.admin_id is not None and user_id == self.admin_id
+    
+    def get_challenge_type_emoji(self, challenge_type: str) -> str:
+        """Get emoji representation for challenge type."""
+        type_emojis = {
+            'photo': '📷',
+            'riddle': '🧩',
+            'code': '💻',
+            'qr': '📱',
+            'trivia': '❓',
+            'location': '📍',
+            'text': '📝',
+            'scavenger': '🔍',
+            'team_activity': '🤝',
+            'decryption': '🔐'
+        }
+        return type_emojis.get(challenge_type, '🎯')
+    
+    def verify_answer(self, challenge: dict, user_answer: str) -> bool:
+        """Verify a text answer for a challenge.
+        
+        Args:
+            challenge: Challenge configuration
+            user_answer: User's submitted answer
+            
+        Returns:
+            True if answer is correct, False otherwise
+        """
+        verification = challenge.get('verification', {})
+        if verification.get('method') != 'answer':
+            return False
+        
+        expected_answer = verification.get('answer', '').lower().strip()
+        user_answer = user_answer.lower().strip()
+        
+        # Check if the expected answer is a comma-separated list (for trivia)
+        if ',' in expected_answer:
+            # For trivia with multiple answers, check if user answer contains all required keywords
+            required_keywords = [kw.strip() for kw in expected_answer.split(',')]
+            return all(keyword in user_answer for keyword in required_keywords)
+        else:
+            # For single answer, check exact match or if expected answer is in user answer
+            return expected_answer == user_answer or expected_answer in user_answer
+    
+    def get_challenge_instructions(self, challenge: dict) -> str:
+        """Get submission instructions based on challenge type.
+        
+        Args:
+            challenge: Challenge configuration
+            
+        Returns:
+            Instruction text for how to submit the challenge
+        """
+        verification = challenge.get('verification', {})
+        method = verification.get('method', 'photo')
+        
+        if method == 'photo':
+            return "📷 Submit a photo to complete this challenge."
+        elif method == 'answer':
+            challenge_type = challenge.get('type', 'text')
+            if challenge_type == 'riddle':
+                return "💡 Reply with your answer to this riddle."
+            elif challenge_type == 'code':
+                return "💻 Reply with your code solution or the result."
+            elif challenge_type == 'trivia':
+                return "📝 Reply with your answer."
+            elif challenge_type == 'decryption':
+                return "🔓 Reply with the decrypted message."
+            elif challenge_type == 'qr':
+                return "📱 Reply with the text from the QR code."
+            else:
+                return "📝 Reply with your answer."
+        elif method == 'location':
+            return "📍 You need to be at the correct location."
+        elif method == 'auto':
+            return "✅ This challenge is auto-verified."
+        else:
+            return "📝 Submit your response to complete this challenge."
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /start command."""
@@ -234,19 +312,26 @@ class AmazingRaceBot:
         message = "🎯 *Challenges* 🎯\n\n"
         
         for i, challenge in enumerate(self.challenges):
+            challenge_type = challenge.get('type', 'text')
+            type_emoji = self.get_challenge_type_emoji(challenge_type)
+            
             if i < current_challenge_index:
                 # Completed challenge
                 message += (
                     f"✅ *Challenge #{challenge['id']}: {challenge['name']}*\n"
+                    f"   {type_emoji} Type: {challenge_type}\n"
                     f"   📍 Location: {challenge['location']}\n"
                     f"   📝 {challenge['description']}\n\n"
                 )
             elif i == current_challenge_index:
                 # Current challenge (unlocked)
+                instructions = self.get_challenge_instructions(challenge)
                 message += (
                     f"🎯 *Challenge #{challenge['id']}: {challenge['name']}* (CURRENT)\n"
+                    f"   {type_emoji} Type: {challenge_type}\n"
                     f"   📍 Location: {challenge['location']}\n"
-                    f"   📝 {challenge['description']}\n\n"
+                    f"   📝 {challenge['description']}\n"
+                    f"   ℹ️ {instructions}\n\n"
                 )
             else:
                 # Locked challenge
@@ -260,7 +345,11 @@ class AmazingRaceBot:
     async def submit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /submit command."""
         if not context.args:
-            await update.message.reply_text("Usage: /submit <challenge_id>")
+            await update.message.reply_text(
+                "Usage: /submit <challenge_id> [answer]\n"
+                "For photo challenges: /submit <challenge_id> then send a photo\n"
+                "For text/answer challenges: /submit <challenge_id> <your answer>"
+            )
             return
         
         try:
@@ -306,27 +395,83 @@ class AmazingRaceBot:
                 )
             return
         
-        # Complete challenge
-        if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges)):
-            team = self.game_state.teams[team_name]
-            completed = len(team['completed_challenges'])
-            total = len(self.challenges)
+        # Get verification method
+        verification = challenge.get('verification', {})
+        method = verification.get('method', 'photo')
+        
+        # Handle different verification methods
+        if method == 'answer':
+            # Text answer verification
+            if len(context.args) < 2:
+                await update.message.reply_text(
+                    f"Please provide your answer:\n"
+                    f"/submit {challenge_id} <your answer>"
+                )
+                return
             
-            response = (
-                f"🎉 Congratulations! Team '{team_name}' completed:\n"
-                f"*{challenge['name']}*\n"
-                f"Progress: {completed}/{total} challenges"
+            user_answer = ' '.join(context.args[1:])
+            
+            if self.verify_answer(challenge, user_answer):
+                # Answer is correct
+                submission_data = {
+                    'type': 'answer',
+                    'answer': user_answer,
+                    'timestamp': datetime.now().isoformat(),
+                    'submitted_by': user.id
+                }
+                
+                if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges), submission_data):
+                    team = self.game_state.teams[team_name]
+                    completed = len(team['completed_challenges'])
+                    total = len(self.challenges)
+                    
+                    response = (
+                        f"✅ Correct! Team '{team_name}' completed:\n"
+                        f"*{challenge['name']}*\n"
+                        f"Progress: {completed}/{total} challenges"
+                    )
+                    
+                    # Check if team finished all challenges
+                    if team.get('finish_time'):
+                        response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+                        response += f"Your team finished the race!\n"
+                        response += f"Finish time: {team['finish_time']}"
+                    
+                    await update.message.reply_text(response, parse_mode='Markdown')
+                else:
+                    await update.message.reply_text("Error completing challenge. Please try again.")
+            else:
+                await update.message.reply_text(
+                    "❌ Incorrect answer. Please try again!\n"
+                    f"Hint: Make sure your answer matches what's being asked."
+                )
+        
+        elif method == 'photo':
+            # Photo verification - wait for photo
+            # Store pending submission in context
+            if 'pending_submissions' not in context.bot_data:
+                context.bot_data['pending_submissions'] = {}
+            
+            context.bot_data['pending_submissions'][user.id] = {
+                'team_name': team_name,
+                'challenge_id': challenge_id,
+                'challenge_name': challenge['name']
+            }
+            
+            await update.message.reply_text(
+                f"📷 Please send a photo for:\n"
+                f"*{challenge['name']}*\n\n"
+                f"The photo will be reviewed by the admin.",
+                parse_mode='Markdown'
             )
-            
-            # Check if team finished all challenges
-            if team.get('finish_time'):
-                response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
-                response += f"Your team finished the race!\n"
-                response += f"Finish time: {team['finish_time']}"
-            
-            await update.message.reply_text(response, parse_mode='Markdown')
+        
         else:
-            await update.message.reply_text("Error completing challenge. Please try again.")
+            # Default: manual verification by admin
+            await update.message.reply_text(
+                f"Submission recorded for *{challenge['name']}*.\n"
+                f"Waiting for admin verification...",
+                parse_mode='Markdown'
+            )
     
     
     async def start_game_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -537,6 +682,105 @@ class AmazingRaceBot:
             parse_mode='Markdown'
         )
     
+    async def photo_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle photo submissions for challenges."""
+        user = update.effective_user
+        
+        # Check if user has a pending photo submission
+        if 'pending_submissions' not in context.bot_data:
+            context.bot_data['pending_submissions'] = {}
+        
+        if user.id not in context.bot_data['pending_submissions']:
+            # No pending submission, ignore the photo
+            return
+        
+        pending = context.bot_data['pending_submissions'][user.id]
+        team_name = pending['team_name']
+        challenge_id = pending['challenge_id']
+        challenge_name = pending['challenge_name']
+        
+        # Get the photo
+        photo = update.message.photo[-1]  # Get highest resolution
+        
+        # Store submission data
+        submission_data = {
+            'type': 'photo',
+            'photo_id': photo.file_id,
+            'timestamp': datetime.now().isoformat(),
+            'submitted_by': user.id,
+            'user_name': user.first_name,
+            'team_name': team_name,
+            'status': 'pending'  # pending, approved, rejected
+        }
+        
+        # Complete the challenge with submission data
+        if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges), submission_data):
+            team = self.game_state.teams[team_name]
+            completed = len(team['completed_challenges'])
+            total = len(self.challenges)
+            
+            response = (
+                f"✅ Photo submitted for:\n"
+                f"*{challenge_name}*\n\n"
+                f"Your submission has been recorded and the challenge is marked as complete!\n"
+                f"Progress: {completed}/{total} challenges"
+            )
+            
+            # Check if team finished all challenges
+            if team.get('finish_time'):
+                response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+                response += f"Your team finished the race!\n"
+                response += f"Finish time: {team['finish_time']}"
+            
+            await update.message.reply_text(response, parse_mode='Markdown')
+            
+            # Notify admin
+            if self.admin_id:
+                try:
+                    await context.bot.send_photo(
+                        chat_id=self.admin_id,
+                        photo=photo.file_id,
+                        caption=(
+                            f"📷 *New Photo Submission*\n"
+                            f"Team: {team_name}\n"
+                            f"Challenge #{challenge_id}: {challenge_name}\n"
+                            f"Submitted by: {user.first_name}\n"
+                            f"Status: Automatically accepted (challenge marked complete)"
+                        ),
+                        parse_mode='Markdown'
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify admin: {e}")
+            
+            # Remove pending submission
+            del context.bot_data['pending_submissions'][user.id]
+        else:
+            await update.message.reply_text("Error processing photo. Please try again.")
+    
+    async def approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /approve command (admin only) - for manual verification if needed in future."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can approve submissions!")
+            return
+        
+        await update.message.reply_text(
+            "ℹ️ Photo submissions are currently auto-approved.\n"
+            "This command is reserved for future manual verification features."
+        )
+    
+    async def reject_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /reject command (admin only) - for manual verification if needed in future."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can reject submissions!")
+            return
+        
+        await update.message.reply_text(
+            "ℹ️ Photo submissions are currently auto-approved.\n"
+            "This command is reserved for future manual verification features."
+        )
+    
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -567,6 +811,11 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("addteam", self.addteam_command))
         application.add_handler(CommandHandler("editteam", self.editteam_command))
         application.add_handler(CommandHandler("removeteam", self.removeteam_command))
+        application.add_handler(CommandHandler("approve", self.approve_command))
+        application.add_handler(CommandHandler("reject", self.reject_command))
+        
+        # Add photo handler for photo submissions
+        application.add_handler(MessageHandler(filters.PHOTO, self.photo_handler))
         
         # Add error handler
         application.add_error_handler(self.error_handler)
