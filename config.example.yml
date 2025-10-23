@@ -8,6 +8,11 @@ game:
   max_teams: 10
   max_team_size: 5
   
+  # Location-based verification settings
+  # When enabled, teams must be within the specified radius of a challenge's 
+  # location coordinates to unlock the next challenge (starting from challenge 2)
+  location_verification_enabled: false  # Set to true to enable location verification
+  
   # Challenge definitions
   # Note: Challenges are completed sequentially - teams must complete
   # challenge 1 before they can attempt challenge 2, and so on.
@@ -37,6 +42,12 @@ game:
       type: "photo"
       verification:
         method: "photo"
+      # Optional: GPS coordinates for location-based verification (latitude, longitude)
+      # Location verification is skipped for challenge 1 (starting point)
+      coordinates:
+        latitude: 37.7749
+        longitude: -122.4194
+        radius: 100  # Verification radius in meters (default: 100m)
       
     - id: 2
       name: "Riddle Master"
@@ -46,6 +57,10 @@ game:
       verification:
         method: "answer"
         answer: "library"
+      coordinates:
+        latitude: 37.7849
+        longitude: -122.4094
+        radius: 100
       
     - id: 3
       name: "Code Debug"
@@ -55,6 +70,10 @@ game:
       verification:
         method: "answer"
         answer: "fibonacci"  # Keyword to check in submission
+      coordinates:
+        latitude: 37.7949
+        longitude: -122.3994
+        radius: 100
       
     - id: 4
       name: "QR Hunt"
@@ -64,6 +83,10 @@ game:
       verification:
         method: "answer"
         answer: "FOUNTAIN_2024"  # QR code contains this text
+      coordinates:
+        latitude: 37.8049
+        longitude: -122.3894
+        radius: 100
       
     - id: 5
       name: "Tech Trivia"
@@ -73,6 +96,7 @@ game:
       verification:
         method: "answer"
         answer: "turing, lovelace, babbage"  # Accept if contains these names
+      # No coordinates needed - can be completed anywhere
       
     - id: 6
       name: "Team Pyramid"
@@ -81,6 +105,10 @@ game:
       type: "team_activity"
       verification:
         method: "photo"
+      coordinates:
+        latitude: 37.8149
+        longitude: -122.3794
+        radius: 100
       
     - id: 7
       name: "Scavenger Hunt"
@@ -89,6 +117,10 @@ game:
       type: "scavenger"
       verification:
         method: "photo"
+      coordinates:
+        latitude: 37.8249
+        longitude: -122.3694
+        radius: 100
       
     - id: 8
       name: "Secret Message"
@@ -98,6 +130,7 @@ game:
       verification:
         method: "answer"
         answer: "congratulations"
+      # No coordinates needed - can be completed anywhere
 
 # Admin user (Telegram user ID)
 # Note: Only one admin is allowed

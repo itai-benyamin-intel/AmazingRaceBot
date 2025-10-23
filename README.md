@@ -7,6 +7,7 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 - 🏁 **Team Management**: Create and join teams
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
 - 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
+- 📍 **Location-Based Verification**: Optional GPS-based verification for physical challenge locations
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
 - 👥 **Multi-team Support**: Support for multiple teams competing simultaneously
 - 🔐 **Admin Controls**: Game start/stop, reset, and team management functionality
@@ -134,6 +135,8 @@ The bot will start and be ready to receive commands!
 - `/addteam <name>` - Create a team as admin
 - `/editteam <old_name> <new_name>` - Rename a team
 - `/removeteam <name>` - Remove a team
+- `/setlocation <challenge_id> <latitude> <longitude> [radius]` - Set GPS coordinates for a challenge
+- `/togglelocation` - Enable/disable location-based verification globally
 
 ## Game Flow
 
@@ -152,6 +155,67 @@ The bot will start and be ready to receive commands!
    - Admin ends the game with `/endgame`
    - Final leaderboard is displayed
    - Winner is the team that finished first!
+
+## Location-Based Verification
+
+The bot supports optional GPS-based location verification for challenges. When enabled, teams must physically be at the challenge location (within a specified radius) before they can submit their answer.
+
+### How It Works
+
+1. **Enable/Disable**: Admin can toggle location verification using `/togglelocation`
+2. **Location Verification**: Teams share their GPS location using Telegram's location attachment
+3. **Distance Check**: Bot calculates distance using the Haversine formula
+4. **Radius Verification**: Team must be within the configured radius (default: 100m)
+5. **Challenge 1 Exception**: Location verification is skipped for Challenge 1 (starting point)
+
+### For Teams
+
+To share your location:
+1. In the chat, tap the attachment button (📎)
+2. Select "Location"
+3. Choose "Send My Current Location"
+4. Wait for the bot to verify your location
+5. Once verified, submit your challenge answer
+
+### For Admins
+
+**Toggle Location Verification:**
+```
+/togglelocation
+```
+This enables or disables location verification for all challenges (except Challenge 1).
+
+**Set Challenge Coordinates:**
+```
+/setlocation <challenge_id> <latitude> <longitude> [radius]
+```
+Example:
+```
+/setlocation 2 37.7749 -122.4194 150
+```
+This sets Challenge 2's location to the specified GPS coordinates with a 150-meter verification radius.
+
+**Configure in config.yml:**
+```yaml
+game:
+  location_verification_enabled: true  # Enable on startup
+  
+  challenges:
+    - id: 2
+      name: "Library Challenge"
+      # ... other fields ...
+      coordinates:
+        latitude: 37.7749
+        longitude: -122.4194
+        radius: 100  # meters
+```
+
+### Privacy Considerations
+
+- Location data is only used for verification during the game
+- Locations are stored temporarily in the game state
+- Teams can choose to share their location only when needed
+- Location verification can be disabled at any time by the admin
 
 ## Configuration
 
@@ -201,6 +265,10 @@ game:
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
   - **answer**: (for answer method) Expected answer or comma-separated keywords
+- **coordinates**: (optional) GPS coordinates for location verification
+  - **latitude**: Latitude coordinate (-90 to 90)
+  - **longitude**: Longitude coordinate (-180 to 180)
+  - **radius**: Verification radius in meters (default: 100)
 
 **Note**: Challenges are completed sequentially based on their ID order (1, 2, 3, etc.)
 
@@ -283,10 +351,16 @@ The bot supports automatic verification for challenges:
 - Case-insensitive comparison
 
 **Customizing Verification:**
-You can customize verification logic in the `verify_answer` method in `bot.py`. For example:
-- Add location-based verification using GPS coordinates
-- Implement time-based challenges
-- Add custom answer validation rules
+You can customize verification logic in the `verify_answer` method in `bot.py`. The bot now includes:
+- **Location-based verification**: GPS coordinate verification using Haversine formula
+- **Answer verification**: Exact match or keyword matching (case-insensitive)
+- **Photo verification**: Automatic acceptance with admin notification
+
+For location verification:
+- Distance is calculated using the Haversine formula for accuracy
+- Teams must be within the configured radius (default 100m)
+- Verification is skipped for Challenge 1
+- Can be toggled on/off globally by admins
 
 ## Troubleshooting
 
