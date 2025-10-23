@@ -401,7 +401,8 @@ class AmazingRaceBot:
                 )
             # Locked challenges are not shown anymore
         
-        message += "Use /current_challenge to see full details of your current challenge."
+        message += "Use /current_challenge to see full details of your current challenge.\n"
+        message += "Use /submit [answer] to submit your answers."
         
         await update.message.reply_text(message, parse_mode='Markdown')
     

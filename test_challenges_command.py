@@ -115,6 +115,9 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         
         # Verify hint about /current_challenge is shown
         self.assertIn("Use /current_challenge", message)
+        
+        # Verify hint about /submit is shown
+        self.assertIn("Use /submit", message)
     
     async def test_challenges_shows_all_completed_when_finished(self):
         """Test that /challenges shows all challenges when team has finished."""
