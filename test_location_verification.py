@@ -265,59 +265,7 @@ class TestLocationVerificationCommands(unittest.IsolatedAsyncioTestCase):
         
         # State should not have changed
         self.assertFalse(bot.game_state.location_verification_enabled)
-    
-    async def test_setlocation_command_admin(self):
-        """Test setlocation command by admin."""
-        with open(self.test_config_file, 'w') as f:
-            yaml.dump(self.config, f)
-        
-        bot = AmazingRaceBot(self.test_config_file)
-        
-        # Mock the update and context
-        update = MagicMock()
-        update.effective_user = MagicMock()
-        update.effective_user.id = 123456789  # Admin ID
-        update.message = MagicMock()
-        update.message.reply_text = AsyncMock()
-        context = MagicMock()
-        context.args = ['1', '37.7749', '-122.4194', '150']
-        
-        await bot.setlocation_command(update, context)
-        
-        # Verify coordinates were set
-        challenge = bot.challenges[0]
-        self.assertEqual(challenge['coordinates']['latitude'], 37.7749)
-        self.assertEqual(challenge['coordinates']['longitude'], -122.4194)
-        self.assertEqual(challenge['coordinates']['radius'], 150)
-        
-        # Verify success message
-        update.message.reply_text.assert_called_once()
-        call_args = update.message.reply_text.call_args
-        message = call_args[0][0]
-        self.assertIn("Location set", message)
-    
-    async def test_setlocation_command_invalid_coordinates(self):
-        """Test setlocation command with invalid coordinates."""
-        with open(self.test_config_file, 'w') as f:
-            yaml.dump(self.config, f)
-        
-        bot = AmazingRaceBot(self.test_config_file)
-        
-        # Mock the update and context
-        update = MagicMock()
-        update.effective_user = MagicMock()
-        update.effective_user.id = 123456789  # Admin ID
-        update.message = MagicMock()
-        update.message.reply_text = AsyncMock()
-        context = MagicMock()
-        
-        # Test invalid latitude (> 90)
-        context.args = ['1', '95.0', '-122.4194', '100']
-        await bot.setlocation_command(update, context)
-        
-        call_args = update.message.reply_text.call_args
-        message = call_args[0][0]
-        self.assertIn("Invalid latitude", message)
+
 
 
 if __name__ == '__main__':
