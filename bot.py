@@ -459,7 +459,14 @@ class AmazingRaceBot:
     async def create_team_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /createteam command."""
         if not context.args:
-            await update.message.reply_text("Usage: /createteam <team_name>")
+            # Store that we're waiting for team name
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'createteam'
+            await update.message.reply_text(
+                "Please provide a team name:\n"
+                "What would you like to name your team?"
+            )
             return
         
         team_name = ' '.join(context.args)
@@ -489,7 +496,14 @@ class AmazingRaceBot:
     async def join_team_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /jointeam command."""
         if not context.args:
-            await update.message.reply_text("Usage: /jointeam <team_name>")
+            # Store that we're waiting for team name
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'jointeam'
+            await update.message.reply_text(
+                "Please provide the team name:\n"
+                "Which team would you like to join?"
+            )
             return
         
         team_name = ' '.join(context.args)
@@ -1010,9 +1024,16 @@ class AmazingRaceBot:
         if method == 'answer':
             # Text answer verification
             if not context.args:
+                # Store that we're waiting for answer
+                if 'waiting_for' not in context.user_data:
+                    context.user_data['waiting_for'] = {}
+                context.user_data['waiting_for']['command'] = 'submit'
+                context.user_data['waiting_for']['challenge_id'] = challenge_id
                 await update.message.reply_text(
-                    f"Please provide your answer:\n"
-                    f"/submit <your answer>"
+                    f"Please provide your answer to the challenge:\n"
+                    f"*{challenge['name']}*\n\n"
+                    f"Type your answer below:",
+                    parse_mode='Markdown'
                 )
                 return
             
@@ -1301,7 +1322,14 @@ class AmazingRaceBot:
             return
         
         if not context.args:
-            await update.message.reply_text("Usage: /addteam <team_name>")
+            # Store that we're waiting for team name
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'addteam'
+            await update.message.reply_text(
+                "Please provide the team name:\n"
+                "What is the name of the team to add?"
+            )
             return
         
         team_name = ' '.join(context.args)
@@ -1329,7 +1357,14 @@ class AmazingRaceBot:
             return
         
         if not context.args:
-            await update.message.reply_text("Usage: /removeteam <team_name>")
+            # Store that we're waiting for team name
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'removeteam'
+            await update.message.reply_text(
+                "Please provide the team name:\n"
+                "Which team would you like to remove?"
+            )
             return
         
         team_name = ' '.join(context.args)
@@ -1778,6 +1813,38 @@ class AmazingRaceBot:
         # Ignore if this is a command (starts with /)
         if update.message.text.startswith('/'):
             return
+        
+        # Check if we're waiting for input from a command
+        if 'waiting_for' in context.user_data and 'command' in context.user_data['waiting_for']:
+            waiting_command = context.user_data['waiting_for']['command']
+            user_input = update.message.text.strip()
+            
+            # Clear the waiting state
+            del context.user_data['waiting_for']
+            
+            # Route to the appropriate command handler with the text as argument
+            if waiting_command == 'createteam':
+                # Simulate command with args
+                context.args = user_input.split()
+                await self.create_team_command(update, context)
+                return
+            elif waiting_command == 'jointeam':
+                context.args = user_input.split()
+                await self.join_team_command(update, context)
+                return
+            elif waiting_command == 'submit':
+                # For submit, we need to call it with the answer
+                context.args = user_input.split()
+                await self.submit_command(update, context)
+                return
+            elif waiting_command == 'addteam':
+                context.args = user_input.split()
+                await self.addteam_command(update, context)
+                return
+            elif waiting_command == 'removeteam':
+                context.args = user_input.split()
+                await self.removeteam_command(update, context)
+                return
         
         # Send helpful message
         response = (
