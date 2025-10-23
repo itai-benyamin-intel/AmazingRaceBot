@@ -22,7 +22,7 @@ The bot supports various challenge types with different verification methods:
 ### Supported Challenge Types
 
 1. **📷 Photo Challenge**: Teams submit photos (e.g., team photo at location, completed puzzle)
-   - Verification: Photo submission (auto-accepted)
+   - Verification: Photo submission (pending admin approval)
    
 2. **🧩 Riddle/Clue Challenge**: Teams solve riddles or puzzles
    - Verification: Text answer (auto-checked)
@@ -47,7 +47,7 @@ The bot supports various challenge types with different verification methods:
 
 ### Verification Methods
 
-- **Photo**: Teams submit a photo which is automatically accepted and sent to admin
+- **Photo**: Teams submit a photo which is sent to admin for approval
 - **Answer**: Text answer is automatically verified against configured answer(s)
   - Supports exact match or keyword matching
   - Case-insensitive comparison
@@ -138,6 +138,8 @@ The bot will start and be ready to receive commands!
 - `/addteam <name>` - Create a team as admin
 - `/editteam <old_name> <new_name>` - Rename a team
 - `/removeteam <name>` - Remove a team
+- `/approve` - View pending photo submissions (approval via inline buttons)
+- `/reject` - View pending photo submissions (same as `/approve`)
 - `/togglelocation` - Enable/disable location-based verification globally
 
 ## Game Flow
@@ -373,7 +375,7 @@ uCodeAmazingRace/
 - Each challenge can only be completed once per team
 - Next challenge is unlocked only after completing the previous one
 - Different challenge types support different submission methods:
-  - **Photo challenges**: Submit photos which are auto-accepted
+  - **Photo challenges**: Submit photos which are sent to admin for approval
   - **Answer challenges**: Submit text answers which are auto-verified
   - **Trivia challenges**: Support multiple required keywords
 - Challenge instructions are displayed based on the challenge type
@@ -398,6 +400,30 @@ uCodeAmazingRace/
 - The game must be started before teams can submit challenges
 - Players can contact the admin using the `/contact` command
 
+### Photo Approval Workflow (for Admins)
+
+When a team submits a photo for a challenge:
+
+1. **Photo Submission**: Team member sends a photo for their current challenge
+2. **Admin Notification**: Admin receives the photo with inline approval buttons
+3. **Review**: Admin reviews the photo to verify it meets challenge requirements
+4. **Approve or Reject**:
+   - Click ✅ **Approve** to mark the challenge as complete
+   - Click ❌ **Reject** to deny the submission
+5. **Team Notification**: 
+   - If approved: All team members receive a notification and can proceed
+   - If rejected: The submitter is notified and can resubmit
+
+**Admin Commands for Photo Management:**
+- `/approve` - View list of all pending photo submissions
+- `/reject` - View list of all pending photo submissions (same as approve)
+- Use the inline buttons on photo messages to approve/reject
+
+**Tips:**
+- Review photos promptly to keep the game flowing
+- Be clear about rejection reasons (teams can resubmit)
+- Use the submission ID in the photo caption to track submissions
+
 ## Customization
 
 ### Adding Custom Commands
@@ -418,8 +444,10 @@ The bot supports automatic verification for challenges:
 
 **Photo Challenges:**
 - Teams submit photos via Telegram
-- Photos are automatically accepted and marked as complete
-- Admin receives a copy of each photo submission
+- Photos are sent to the admin for approval
+- Admin can approve or reject submissions using inline buttons
+- After approval, challenge is marked as complete
+- Team members are notified when their photo is approved or rejected
 
 **Answer Challenges:**
 - Teams submit text answers via the `/submit` command
@@ -431,7 +459,7 @@ The bot supports automatic verification for challenges:
 You can customize verification logic in the `verify_answer` method in `bot.py`. The bot now includes:
 - **Location-based verification**: GPS coordinate verification using Haversine formula
 - **Answer verification**: Exact match or keyword matching (case-insensitive)
-- **Photo verification**: Automatic acceptance with admin notification
+- **Photo verification**: Manual admin approval with notification
 
 For location verification:
 - Distance is calculated using the Haversine formula for accuracy

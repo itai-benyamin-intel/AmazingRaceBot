@@ -153,23 +153,32 @@ class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
         context.bot.send_message = AsyncMock()
         context.bot.send_photo = AsyncMock()
         
-        # Submit photo for second challenge
+        # Submit photo for second challenge (now pending, not auto-complete)
         await bot.photo_handler(update, context)
         
-        # Verify team finished
+        # Verify team has NOT finished yet (photo is pending approval)
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        self.assertIsNone(team.get('finish_time'))
+        
+        # Verify photo was sent to admin with buttons (not broadcast yet)
+        self.assertEqual(context.bot.send_photo.call_count, 1)
+        photo_call = context.bot.send_photo.call_args[1]
+        self.assertEqual(photo_call['chat_id'], 999999999)
+        self.assertIn("Pending Review", photo_call['caption'])
+        
+        # Get the submission ID from pending submissions
+        pending = bot.game_state.get_pending_photo_submissions()
+        self.assertEqual(len(pending), 1)
+        submission_id = list(pending.keys())[0]
+        
+        # Now simulate admin approval
+        bot.game_state.approve_photo_submission(submission_id, 2)
+        
+        # Verify team finished after approval
         team = bot.game_state.teams["Team A"]
         self.assertEqual(len(team['completed_challenges']), 2)
         self.assertIsNotNone(team['finish_time'])
-        
-        # Verify broadcast was sent (to Bob and Admin)
-        self.assertEqual(context.bot.send_message.call_count, 2)
-        
-        # Verify the message includes finish information
-        calls = context.bot.send_message.call_args_list
-        for call_obj in calls:
-            message_text = call_obj[1]['text']
-            self.assertIn("CONGRATULATIONS", message_text)
-            self.assertIn("finished the race", message_text)
     
     async def test_no_broadcast_to_submitter(self):
         """Test that the person who submitted doesn't receive the broadcast."""
@@ -246,27 +255,21 @@ class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
         context.bot.send_message = AsyncMock()
         context.bot.send_photo = AsyncMock()
         
-        # Submit photo
+        # Submit photo (now pending, not auto-complete)
         await bot.photo_handler(update, context)
         
-        # Verify broadcast was sent to Alice and Admin
-        self.assertEqual(context.bot.send_message.call_count, 2)
-        
-        calls = context.bot.send_message.call_args_list
-        sent_to_ids = [call[1]['chat_id'] for call in calls]
-        
-        # Verify Alice and Admin received it
-        self.assertIn(111111, sent_to_ids)  # Alice
-        self.assertIn(999999999, sent_to_ids)  # Admin
-        
-        # Verify Bob (submitter) did NOT receive the broadcast
-        self.assertNotIn(222222, sent_to_ids)
-        
-        # Verify admin also got the photo separately
+        # Verify photo was sent to admin with buttons (no broadcast yet)
         self.assertEqual(context.bot.send_photo.call_count, 1)
         photo_call = context.bot.send_photo.call_args[1]
         self.assertEqual(photo_call['chat_id'], 999999999)
-        self.assertIn("Photo Submission", photo_call['caption'])
+        self.assertIn("Pending Review", photo_call['caption'])
+        
+        # Verify challenge was NOT completed yet
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        
+        # No broadcast should have been sent yet
+        self.assertEqual(context.bot.send_message.call_count, 0)
 
 
 if __name__ == '__main__':

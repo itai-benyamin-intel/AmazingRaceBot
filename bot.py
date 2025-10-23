@@ -1233,81 +1233,202 @@ class AmazingRaceBot:
         # Get the photo
         photo = update.message.photo[-1]  # Get highest resolution
         
-        # Store submission data
-        submission_data = {
-            'type': 'photo',
-            'photo_id': photo.file_id,
-            'timestamp': datetime.now().isoformat(),
-            'submitted_by': user.id,
-            'user_name': user.first_name,
-            'team_name': team_name,
-            'status': 'pending'  # pending, approved, rejected
-        }
+        # Store the submission as pending (not auto-completing)
+        submission_id = self.game_state.add_pending_photo_submission(
+            team_name, challenge_id, photo.file_id, user.id, user.first_name
+        )
         
-        # Complete the challenge with submission data
-        if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges), submission_data):
-            team = self.game_state.teams[team_name]
-            completed = len(team['completed_challenges'])
-            total = len(self.challenges)
-            
-            response = (
-                f"✅ Photo submitted for:\n"
-                f"*{challenge_name}*\n\n"
-                f"Your submission has been recorded and the challenge is marked as complete!\n"
-                f"Progress: {completed}/{total} challenges"
+        # Notify the user that photo was submitted and is pending review
+        response = (
+            f"📷 Photo submitted for:\n"
+            f"*{challenge_name}*\n\n"
+            f"Your photo has been sent to the admin for review.\n"
+            f"You will be notified once it's approved."
+        )
+        
+        await update.message.reply_text(response, parse_mode='Markdown')
+        
+        # Send photo to admin for review with approval/rejection buttons
+        if self.admin_id:
+            try:
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("✅ Approve", callback_data=f"approve_{submission_id}"),
+                        InlineKeyboardButton("❌ Reject", callback_data=f"reject_{submission_id}")
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await context.bot.send_photo(
+                    chat_id=self.admin_id,
+                    photo=photo.file_id,
+                    caption=(
+                        f"📷 *Photo Submission - Pending Review*\n"
+                        f"Team: {team_name}\n"
+                        f"Challenge #{challenge_id}: {challenge_name}\n"
+                        f"Submitted by: {user.first_name}\n\n"
+                        f"Submission ID: `{submission_id}`"
+                    ),
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                logger.error(f"Failed to send photo to admin: {e}")
+        
+        # Remove pending submission
+        del context.bot_data['pending_submissions'][user.id]
+    
+    async def photo_approval_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle photo approval/rejection callbacks from admin."""
+        query = update.callback_query
+        await query.answer()
+        
+        user = update.effective_user
+        
+        # Only admin can approve/reject
+        if not self.is_admin(user.id):
+            await query.edit_message_caption(
+                caption=query.message.caption + "\n\n❌ Only admins can approve/reject submissions.",
+                parse_mode='Markdown'
             )
-            
-            # Check if team finished all challenges
-            if team.get('finish_time'):
-                response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
-                response += f"Your team finished the race!\n"
-                response += f"Finish time: {team['finish_time']}"
+            return
+        
+        # Parse callback data: approve_{submission_id} or reject_{submission_id}
+        callback_data = query.data
+        parts = callback_data.split('_', 1)
+        
+        if len(parts) != 2:
+            await query.edit_message_caption(
+                caption=query.message.caption + "\n\n❌ Invalid request.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        action = parts[0]
+        submission_id = parts[1]
+        
+        # Get submission details
+        submission = self.game_state.get_submission_by_id(submission_id)
+        
+        if not submission:
+            await query.edit_message_caption(
+                caption=query.message.caption + "\n\n❌ Submission not found.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        if submission.get('status') != 'pending':
+            status = submission.get('status', 'unknown')
+            await query.edit_message_caption(
+                caption=query.message.caption + f"\n\n⚠️ This submission has already been {status}.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        team_name = submission['team_name']
+        challenge_id = submission['challenge_id']
+        challenge_name = self.challenges[challenge_id - 1]['name']
+        user_id = submission['user_id']
+        user_name = submission['user_name']
+        
+        if action == 'approve':
+            # Approve the submission
+            if self.game_state.approve_photo_submission(submission_id, len(self.challenges)):
+                team = self.game_state.teams[team_name]
+                completed = len(team['completed_challenges'])
+                total = len(self.challenges)
+                
+                # Update admin message
+                await query.edit_message_caption(
+                    caption=query.message.caption + "\n\n✅ *APPROVED*",
+                    parse_mode='Markdown'
+                )
+                
+                # Notify team members
+                team_members = team['members']
+                for member in team_members:
+                    try:
+                        response = (
+                            f"✅ *Photo Approved!*\n\n"
+                            f"Your photo for *{challenge_name}* has been approved!\n"
+                            f"Progress: {completed}/{total} challenges"
+                        )
+                        
+                        # Check if team finished
+                        if team.get('finish_time'):
+                            response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+                            response += f"Your team finished the race!\n"
+                            response += f"Finish time: {team['finish_time']}"
+                        else:
+                            # Check for hint penalty
+                            next_challenge_id = challenge_id + 1
+                            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                            if unlock_time_str:
+                                unlock_time = datetime.fromisoformat(unlock_time_str)
+                                hint_count = self.game_state.get_hint_count(team_name, challenge_id)
+                                penalty_minutes = hint_count * 2
+                                
+                                response += (
+                                    f"\n\n⏱️ *Hint Penalty Applied*\n"
+                                    f"You used {hint_count} hint(s) on this challenge.\n"
+                                    f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
+                                    f"{unlock_time.strftime('%H:%M:%S')}"
+                                )
+                        
+                        await context.bot.send_message(
+                            chat_id=member['id'],
+                            text=response,
+                            parse_mode='Markdown'
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to notify team member {member['id']}: {e}")
+                
+                # Broadcast completion to team and admin (excluding the notified members)
+                await self.broadcast_challenge_completion(
+                    context, team_name, challenge_id, challenge_name,
+                    user_id, user_name, completed, total
+                )
             else:
-                # Check if there's a penalty for the next challenge
-                next_challenge_id = challenge_id + 1
-                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
-                if unlock_time_str:
-                    unlock_time = datetime.fromisoformat(unlock_time_str)
-                    hint_count = self.game_state.get_hint_count(team_name, challenge_id)
-                    penalty_minutes = hint_count * 2
-                    
-                    response += (
-                        f"\n\n⏱️ *Hint Penalty Applied*\n"
-                        f"You used {hint_count} hint(s) on this challenge.\n"
-                        f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
-                        f"{unlock_time.strftime('%H:%M:%S')}"
-                    )
-            
-            await update.message.reply_text(response, parse_mode='Markdown')
-            
-            # Broadcast completion to team and admin
-            await self.broadcast_challenge_completion(
-                context, team_name, challenge_id, challenge_name,
-                user.id, user.first_name, completed, total
-            )
-            
-            # Also send photo to admin
-            if self.admin_id:
+                await query.edit_message_caption(
+                    caption=query.message.caption + "\n\n❌ Failed to approve submission.",
+                    parse_mode='Markdown'
+                )
+        
+        elif action == 'reject':
+            # Reject the submission
+            if self.game_state.reject_photo_submission(submission_id):
+                # Update admin message
+                await query.edit_message_caption(
+                    caption=query.message.caption + "\n\n❌ *REJECTED*",
+                    parse_mode='Markdown'
+                )
+                
+                # Notify the submitter
                 try:
-                    await context.bot.send_photo(
-                        chat_id=self.admin_id,
-                        photo=photo.file_id,
-                        caption=(
-                            f"📷 *Photo Submission*\n"
-                            f"Team: {team_name}\n"
-                            f"Challenge #{challenge_id}: {challenge_name}\n"
-                            f"Submitted by: {user.first_name}"
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=(
+                            f"❌ *Photo Rejected*\n\n"
+                            f"Your photo for *{challenge_name}* was rejected.\n"
+                            f"Please submit a new photo using `/submit`."
                         ),
                         parse_mode='Markdown'
                     )
                 except Exception as e:
-                    logger.error(f"Failed to send photo to admin: {e}")
-            
-            # Remove pending submission
-            del context.bot_data['pending_submissions'][user.id]
+                    logger.error(f"Failed to notify user {user_id}: {e}")
+            else:
+                await query.edit_message_caption(
+                    caption=query.message.caption + "\n\n❌ Failed to reject submission.",
+                    parse_mode='Markdown'
+                )
         else:
-            await update.message.reply_text("Error processing photo. Please try again.")
-    
+            await query.edit_message_caption(
+                caption=query.message.caption + "\n\n❌ Invalid action.",
+                parse_mode='Markdown'
+            )
+
     async def location_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle location submissions for challenge verification."""
         user = update.effective_user
@@ -1402,28 +1523,64 @@ class AmazingRaceBot:
             await update.message.reply_text(response, parse_mode='Markdown')
     
     async def approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /approve command (admin only) - for manual verification if needed in future."""
+        """Handle the /approve command (admin only) - approve pending photo submissions."""
         user = update.effective_user
         if not self.is_admin(user.id):
             await update.message.reply_text("Only admins can approve submissions!")
             return
         
-        await update.message.reply_text(
-            "ℹ️ Photo submissions are currently auto-approved.\n"
-            "This command is reserved for future manual verification features."
-        )
+        # Check if there are pending submissions
+        pending = self.game_state.get_pending_photo_submissions()
+        
+        if not pending:
+            await update.message.reply_text(
+                "ℹ️ No pending photo submissions to approve.\n"
+                "Photo submissions will appear here when teams submit photos for challenges."
+            )
+            return
+        
+        # Display pending submissions
+        message = "📷 *Pending Photo Submissions:*\n\n"
+        for submission_id, submission in pending.items():
+            message += (
+                f"• Team: {submission['team_name']}\n"
+                f"  Challenge #{submission['challenge_id']}\n"
+                f"  Submitted by: {submission['user_name']}\n"
+                f"  ID: `{submission_id}`\n\n"
+            )
+        message += "Use the buttons on the photo messages to approve/reject submissions."
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
     
     async def reject_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /reject command (admin only) - for manual verification if needed in future."""
+        """Handle the /reject command (admin only) - view pending submissions."""
         user = update.effective_user
         if not self.is_admin(user.id):
             await update.message.reply_text("Only admins can reject submissions!")
             return
         
-        await update.message.reply_text(
-            "ℹ️ Photo submissions are currently auto-approved.\n"
-            "This command is reserved for future manual verification features."
-        )
+        # Check if there are pending submissions
+        pending = self.game_state.get_pending_photo_submissions()
+        
+        if not pending:
+            await update.message.reply_text(
+                "ℹ️ No pending photo submissions to review.\n"
+                "Photo submissions will appear here when teams submit photos for challenges."
+            )
+            return
+        
+        # Display pending submissions
+        message = "📷 *Pending Photo Submissions:*\n\n"
+        for submission_id, submission in pending.items():
+            message += (
+                f"• Team: {submission['team_name']}\n"
+                f"  Challenge #{submission['challenge_id']}\n"
+                f"  Submitted by: {submission['user_name']}\n"
+                f"  ID: `{submission_id}`\n\n"
+            )
+        message += "Use the buttons on the photo messages to approve/reject submissions."
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
     
 
     async def togglelocation_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1492,7 +1649,11 @@ class AmazingRaceBot:
 
         application.add_handler(CommandHandler("togglelocation", self.togglelocation_command))
         
-        # Add callback query handler for hint confirmations
+        # Add callback query handlers
+        application.add_handler(CallbackQueryHandler(
+            self.photo_approval_callback_handler, 
+            pattern="^(approve|reject)_.*"
+        ))
         application.add_handler(CallbackQueryHandler(self.hint_callback_handler))
         
         # Add photo handler for photo submissions
