@@ -184,7 +184,7 @@ class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context.bot.send_photo.call_count, 1)
         photo_call = context.bot.send_photo.call_args[1]
         self.assertEqual(photo_call['chat_id'], 999999999)
-        self.assertIn("Pending Review", photo_call['caption'])
+        self.assertIn("Challenge Completion", photo_call['caption'])
         
         # Get the submission ID from pending submissions
         pending = bot.game_state.get_pending_photo_submissions()
@@ -281,7 +281,7 @@ class TestChallengeBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context.bot.send_photo.call_count, 1)
         photo_call = context.bot.send_photo.call_args[1]
         self.assertEqual(photo_call['chat_id'], 999999999)
-        self.assertIn("Pending Review", photo_call['caption'])
+        self.assertIn("Challenge Completion", photo_call['caption'])
         
         # Verify challenge was NOT completed yet
         team = bot.game_state.teams["Team A"]
