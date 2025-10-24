@@ -1,6 +1,6 @@
 # Challenge Types Guide
 
-This document provides detailed information about the challenge types system in the uCode Amazing Race bot.
+This document provides detailed information about the challenge types system in the AmazingRaceBot.
 
 ## Overview
 

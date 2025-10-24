@@ -23,7 +23,7 @@ This document shows example interactions with the Amazing Race bot.
 **Player 1:**
 ```
 User: /start
-Bot: 🏁 Welcome to uCode Amazing Race! 🏁
+Bot: 🏁 Welcome to AmazingRaceBot! 🏁
      This is an interactive Amazing Race game.
      Complete challenges sequentially to win!
      [Commands list...]
