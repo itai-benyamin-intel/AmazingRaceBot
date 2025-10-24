@@ -8,8 +8,7 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
 - 💡 **Hints System**: Teams can request up to 3 hints per challenge with time penalties
 - 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
-- 📸 **Photo Verification**: Optional photo verification for location arrival (challenges 2+)
-- 📍 **Location-Based Verification**: Optional GPS-based verification for physical challenge locations
+- 📸 **Photo Verification**: Photo verification for location arrival (challenges 2+) - ensures teams are at locations
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
 - 👥 **Multi-team Support**: Support for multiple teams competing simultaneously
 - 🔐 **Admin Controls**: Game start/stop, reset, and team management functionality
@@ -142,7 +141,6 @@ The bot will start and be ready to receive commands!
 - `/approve` - View pending photo submissions (approval via inline buttons)
 - `/reject` - View pending photo submissions (same as `/approve`)
 - `/togglephotoverify` - Enable/disable photo verification for location arrival (challenges 2+)
-- `/togglelocation` - Enable/disable location-based verification globally
 
 ## Game Flow
 
@@ -296,39 +294,32 @@ When a team sends a location photo:
 - Teams control when they send photos
 - Photo verification can be disabled at any time by the admin
 
-## Location-Based Verification
+## Location-Based Verification (Legacy)
 
-The bot supports optional GPS-based location verification for challenges. When enabled, teams must physically be at the challenge location (within a specified radius) before they can submit their answer.
+> **Note:** Location-based verification has been replaced by Photo Verification for most use cases. Photo verification provides better proof that teams are at the correct location. The location verification code remains for backward compatibility with existing configurations, but the `/togglelocation` command has been removed.
 
-### How It Works
+The bot includes GPS-based location verification code that can verify teams are within a specific radius of challenge locations. However, this feature is no longer actively maintained in favor of the more robust Photo Verification system.
 
-1. **Enable/Disable**: Admin can toggle location verification using `/togglelocation`
-2. **Location Verification**: Teams share their GPS location using Telegram's location attachment
-3. **Distance Check**: Bot calculates distance using the Haversine formula
-4. **Radius Verification**: Team must be within the configured radius (default: 100m)
-5. **Challenge 1 Exception**: Location verification is skipped for Challenge 1 (starting point)
+### GPS Location Handler
 
-### For Teams
+The location handler remains functional and will:
+1. Accept GPS location shares from teams
+2. Calculate distance using the Haversine formula
+3. Verify teams are within the configured radius (default: 100m)
+4. Store verification in team data
 
-To share your location:
+However, there is no command to toggle this feature on/off. It's controlled by the `location_verification_enabled` flag in the game state, which can only be set programmatically.
+
+**For teams using GPS location verification:**
 1. In the chat, tap the attachment button (📎)
 2. Select "Location"
 3. Choose "Send My Current Location"
 4. Wait for the bot to verify your location
-5. Once verified, submit your challenge answer
-
-### For Admins
-
-**Toggle Location Verification:**
-```
-/togglelocation
-```
-This enables or disables location verification for all challenges (except Challenge 1).
 
 **Configure Challenge Coordinates in config.yml:**
 ```yaml
 game:
-  location_verification_enabled: true  # Enable on startup
+  location_verification_enabled: true  # Must be set in config or programmatically
   
   challenges:
     - id: 2

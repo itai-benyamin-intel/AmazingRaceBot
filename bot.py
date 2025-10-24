@@ -1095,25 +1095,6 @@ class AmazingRaceBot:
                     )
                     return
         
-        # Check location verification for challenges 2 onwards (if enabled)
-        if self.game_state.location_verification_enabled and challenge_id > 1:
-            location_verifications = team.get('location_verifications', {})
-            if str(challenge_id) not in location_verifications:
-                # Location not verified yet
-                coordinates = challenge.get('coordinates', {})
-                if coordinates and coordinates.get('latitude') is not None:
-                    await update.message.reply_text(
-                        f"📍 *Location Verification Required*\n\n"
-                        f"Please share your location before submitting this challenge.\n"
-                        f"You must be at: {challenge['location']}\n\n"
-                        f"To share your location:\n"
-                        f"1. Tap the attachment button (📎)\n"
-                        f"2. Select 'Location'\n"
-                        f"3. Choose 'Send My Current Location'",
-                        parse_mode='Markdown'
-                    )
-                    return
-        
         # Get verification method
         verification = challenge.get('verification', {})
         method = verification.get('method', 'photo')
@@ -2132,34 +2113,6 @@ class AmazingRaceBot:
         await update.message.reply_text(message, parse_mode='Markdown')
     
 
-    async def togglelocation_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /togglelocation command (admin only) - toggle location verification."""
-        user = update.effective_user
-        if not self.is_admin(user.id):
-            await update.message.reply_text("Only admins can toggle location verification!")
-            return
-        
-        new_state = self.game_state.toggle_location_verification()
-        
-        status = "enabled ✅" if new_state else "disabled ❌"
-        message = f"📍 Location verification is now *{status}*\n\n"
-        
-        if new_state:
-            message += (
-                "Teams must now verify their location before submitting challenges 2 onwards.\n"
-                "They can share their location using Telegram's location attachment feature.\n\n"
-                "To share location:\n"
-                "1. Tap the attachment button (📎)\n"
-                "2. Select 'Location'\n"
-                "3. Choose 'Send My Current Location'"
-            )
-        else:
-            message += (
-                "Teams can now submit challenges without location verification.\n"
-                "Location verification can be re-enabled at any time."
-            )
-        
-        await update.message.reply_text(message, parse_mode='Markdown')
     
     async def unrecognized_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle unrecognized text messages."""
@@ -2246,7 +2199,6 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("approve", self.approve_command))
         application.add_handler(CommandHandler("reject", self.reject_command))
 
-        application.add_handler(CommandHandler("togglelocation", self.togglelocation_command))
         application.add_handler(CommandHandler("togglephotoverify", self.togglephotoverify_command))
         
         # Add callback query handlers
