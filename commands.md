@@ -23,8 +23,7 @@ challenges - View completed and current challenge
 current - View your current challenge
 hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge (usage: /submit [answer])
-leaderboard - View current team standings
-teams - List all teams
+teams - View all teams with their captains and members
 contact - Contact the bot admin
 ```
 
@@ -33,6 +32,7 @@ contact - Contact the bot admin
 startgame - Start the game (admin only)
 endgame - End the game and show final standings (admin only)
 reset - Reset all game data (admin only)
+leaderboard - View current team standings with progress (admin only)
 teamstatus - View detailed status of all teams (admin only)
 addteam - Create a team as admin (usage: /addteam <name>)
 editteam - Rename a team (usage: /editteam <old_name> <new_name>)
@@ -54,12 +54,12 @@ challenges - View completed and current challenge
 current - View your current challenge
 hint - Get a hint (costs 2 min penalty)
 submit - Submit current challenge
-leaderboard - View current team standings
-teams - List all teams
+teams - View all teams with their captains and members
 contact - Contact the bot admin
 startgame - Start the game (admin only)
 endgame - End the game (admin only)
 reset - Reset all game data (admin only)
+leaderboard - View team standings with progress (admin only)
 teamstatus - View detailed team status (admin only)
 addteam - Create a team (admin only)
 editteam - Rename a team (admin only)
