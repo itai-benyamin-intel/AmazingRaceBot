@@ -8,6 +8,7 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
 - 💡 **Hints System**: Teams can request up to 3 hints per challenge with time penalties
 - 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
+- 📸 **Photo Verification**: Optional photo verification for location arrival (challenges 2+)
 - 📍 **Location-Based Verification**: Optional GPS-based verification for physical challenge locations
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
 - 👥 **Multi-team Support**: Support for multiple teams competing simultaneously
@@ -140,6 +141,7 @@ The bot will start and be ready to receive commands!
 - `/removeteam <name>` - Remove a team
 - `/approve` - View pending photo submissions (approval via inline buttons)
 - `/reject` - View pending photo submissions (same as `/approve`)
+- `/togglephotoverify` - Enable/disable photo verification for location arrival (challenges 2+)
 - `/togglelocation` - Enable/disable location-based verification globally
 
 ## Game Flow
@@ -227,6 +229,72 @@ Teams should consider:
 - **Team coordination**: Any team member can request a hint (all members are notified)
 - **Penalty impact**: 6 minutes total penalty can be significant in a close race
 - **Progressive difficulty**: Hints are revealed one at a time (can't skip to the last hint)
+
+## Photo Verification for Location Arrival
+
+The bot supports optional photo verification for challenges 2 onwards. When enabled, teams must send a photo of their team at the challenge location before the challenge details are revealed. This ensures teams physically arrive at each location before knowing what they need to do.
+
+### How It Works
+
+1. **Enable/Disable**: Admin can toggle photo verification using `/togglephotoverify`
+2. **Challenge Progression**: Team completes Challenge 1 and moves to Challenge 2
+3. **Photo Required**: Before Challenge 2 details are shown, team must send a photo
+4. **Admin Approval**: Admin reviews the photo and approves/rejects it
+5. **Challenge Revealed**: Once approved, the full challenge details are revealed to all team members
+6. **Timeout Starts**: The penalty timeout (from hints) only starts after photo approval
+
+### For Teams
+
+**When you advance to a new challenge (2+):**
+
+1. You'll see a message indicating photo verification is required
+2. Go to the challenge location (only the name and location are shown)
+3. Take a photo of your team at that location
+4. Send the photo to the bot
+5. Wait for admin approval
+6. Once approved, the full challenge details will be revealed
+7. Complete the challenge as normal
+
+**Important Notes:**
+- Only challenges 2 and onwards require photo verification
+- Challenge 1 does not require photo verification (it's the starting point)
+- Any team member can send the photo
+- The photo must show your team at the location
+- The timeout/penalty timer only starts after the photo is approved
+
+### For Admins
+
+**Toggle Photo Verification:**
+```
+/togglephotoverify
+```
+This enables or disables photo verification for all challenges except Challenge 1.
+
+**Approving Photos:**
+When a team sends a location photo:
+1. You'll receive the photo with the team name and challenge number
+2. Review the photo to verify the team is at the correct location
+3. Click ✅ **Approve** to reveal the challenge to the team
+4. Click ❌ **Reject** if the photo is incorrect (team can resubmit)
+
+**Managing Multiple Teams:**
+- Multiple teams can have pending photo verifications simultaneously
+- Each photo shows which team and challenge it's for
+- Use the inline buttons on each photo to approve/reject
+- Use `/approve` to see a list of all pending verifications
+
+**Tips:**
+- Review photos promptly to keep the game flowing
+- Be clear about why photos are rejected (team can send a new one)
+- Photo verification adds an extra layer of fairness to the race
+- The timeout/penalty timer starts only after you approve the photo
+
+### Privacy Considerations
+
+- Photos are only used for verification during the game
+- Photos are stored temporarily in the game state
+- Teams control when they send photos
+- Photo verification can be disabled at any time by the admin
 
 ## Location-Based Verification
 
