@@ -1223,24 +1223,34 @@ class AmazingRaceBot:
         
         self.game_state.start_game()
         
-        # Prepare the game started message
+        # Prepare the game started message with more information about relevant commands
         game_start_message = (
             "🏁 *THE GAME HAS STARTED!* 🏁\n\n"
-            "Teams can now start completing challenges!\n"
-            "Use /challenges to see available challenges.\n"
+            "The race is on! Complete challenges to win.\n\n"
+            "📍 *Key Commands:*\n"
+            "• `/current` - View your current challenge\n"
+            "• `/submit [answer]` - Submit your answer\n"
+            "• `/challenges` - See all challenges progress\n"
+            "• `/hint` - Get a hint (2 min penalty)\n"
+            "• `/myteam` - View your team info\n\n"
             "Good luck! 🎯"
         )
         
         # Send message to admin
         await update.message.reply_text(game_start_message, parse_mode='Markdown')
         
-        # Broadcast message to all team members
+        # Broadcast message to all team members and their current challenge
         sent_to_users = set()  # Track users to avoid duplicate messages
+        admin_is_player = False  # Track if admin is also a player
+        
         for team_name, team_data in self.game_state.teams.items():
             for member in team_data['members']:
                 user_id = member['id']
-                # Skip if already sent (e.g., admin is also a team member)
-                if user_id in sent_to_users or user_id == user.id:
+                # Check if admin is also a player
+                if user_id == user.id:
+                    admin_is_player = True
+                # Skip if already sent to this user
+                if user_id in sent_to_users:
                     continue
                 
                 try:
@@ -1253,6 +1263,11 @@ class AmazingRaceBot:
                 except Exception as e:
                     logger.error(f"Failed to send game start message to user {user_id}: {e}")
                     # Continue sending to other users even if one fails
+        
+        # Broadcast current challenge to all teams (excluding admin only if admin is not a player)
+        for team_name in self.game_state.teams.keys():
+            exclude_user_id = None if admin_is_player else user.id
+            await self.broadcast_current_challenge(context, team_name, exclude_user_id)
     
     async def end_game_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /endgame command (admin only)."""
