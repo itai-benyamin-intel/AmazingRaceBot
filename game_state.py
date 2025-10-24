@@ -17,8 +17,10 @@ class GameState:
         self.game_started: bool = False
         self.game_ended: bool = False
         self.location_verification_enabled: bool = False
+        self.photo_verification_enabled: bool = False
         self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
         self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
+        self.pending_photo_verifications: Dict[str, Dict] = {}  # Track pending photo verifications for location
         self.load_state()
     
     def load_state(self):
@@ -32,8 +34,10 @@ class GameState:
                     self.game_started = data.get('game_started', False)
                     self.game_ended = data.get('game_ended', False)
                     self.location_verification_enabled = data.get('location_verification_enabled', False)
+                    self.photo_verification_enabled = data.get('photo_verification_enabled', False)
                     self.hint_usage = data.get('hint_usage', {})
                     self.pending_photo_submissions = data.get('pending_photo_submissions', {})
+                    self.pending_photo_verifications = data.get('pending_photo_verifications', {})
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -46,8 +50,10 @@ class GameState:
                 'game_started': self.game_started,
                 'game_ended': self.game_ended,
                 'location_verification_enabled': self.location_verification_enabled,
+                'photo_verification_enabled': self.photo_verification_enabled,
                 'hint_usage': self.hint_usage,
-                'pending_photo_submissions': self.pending_photo_submissions
+                'pending_photo_submissions': self.pending_photo_submissions,
+                'pending_photo_verifications': self.pending_photo_verifications
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -180,8 +186,10 @@ class GameState:
         self.game_started = False
         self.game_ended = False
         self.location_verification_enabled = False
+        self.photo_verification_enabled = False
         self.hint_usage = {}
         self.pending_photo_submissions = {}
+        self.pending_photo_verifications = {}
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 
@@ -281,6 +289,128 @@ class GameState:
         """
         self.location_verification_enabled = enabled
         self.save_state()
+    
+    def toggle_photo_verification(self) -> bool:
+        """Toggle photo verification on/off.
+        
+        Returns:
+            New state of photo verification (True if enabled, False if disabled)
+        """
+        self.photo_verification_enabled = not self.photo_verification_enabled
+        self.save_state()
+        return self.photo_verification_enabled
+    
+    def set_photo_verification(self, enabled: bool) -> None:
+        """Set photo verification state.
+        
+        Args:
+            enabled: True to enable, False to disable
+        """
+        self.photo_verification_enabled = enabled
+        self.save_state()
+    
+    def add_pending_photo_verification(self, team_name: str, challenge_id: int, 
+                                       photo_id: str, user_id: int, user_name: str) -> str:
+        """Add a pending photo verification for location arrival.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge they're arriving at
+            photo_id: Telegram photo file ID
+            user_id: ID of user who submitted
+            user_name: Name of user who submitted
+            
+        Returns:
+            Verification ID (unique identifier for this verification)
+        """
+        verification_id = f"{team_name}_{challenge_id}_{datetime.now().timestamp()}"
+        
+        self.pending_photo_verifications[verification_id] = {
+            'team_name': team_name,
+            'challenge_id': challenge_id,
+            'photo_id': photo_id,
+            'user_id': user_id,
+            'user_name': user_name,
+            'timestamp': datetime.now().isoformat(),
+            'status': 'pending'
+        }
+        
+        self.save_state()
+        return verification_id
+    
+    def get_pending_photo_verifications(self) -> Dict[str, Dict]:
+        """Get all pending photo verifications for location arrival.
+        
+        Returns:
+            Dictionary of pending verifications
+        """
+        return {k: v for k, v in self.pending_photo_verifications.items() 
+                if v.get('status') == 'pending'}
+    
+    def approve_photo_verification(self, verification_id: str) -> bool:
+        """Approve a photo verification for location arrival.
+        
+        Args:
+            verification_id: ID of the verification to approve
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if verification_id not in self.pending_photo_verifications:
+            return False
+        
+        verification = self.pending_photo_verifications[verification_id]
+        team_name = verification['team_name']
+        challenge_id = verification['challenge_id']
+        
+        # Store photo verification in team data
+        if team_name not in self.teams:
+            return False
+        
+        if 'photo_verifications' not in self.teams[team_name]:
+            self.teams[team_name]['photo_verifications'] = {}
+        
+        self.teams[team_name]['photo_verifications'][str(challenge_id)] = {
+            'verified_by': verification['user_id'],
+            'user_name': verification['user_name'],
+            'photo_id': verification['photo_id'],
+            'timestamp': verification['timestamp'],
+            'approved_at': datetime.now().isoformat()
+        }
+        
+        # Mark verification as approved
+        self.pending_photo_verifications[verification_id]['status'] = 'approved'
+        self.save_state()
+        return True
+    
+    def reject_photo_verification(self, verification_id: str) -> bool:
+        """Reject a photo verification for location arrival.
+        
+        Args:
+            verification_id: ID of the verification to reject
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if verification_id not in self.pending_photo_verifications:
+            return False
+        
+        # Mark verification as rejected
+        self.pending_photo_verifications[verification_id]['status'] = 'rejected'
+        self.save_state()
+        return True
+    
+    def get_photo_verification_by_id(self, verification_id: str) -> Optional[Dict]:
+        """Get a photo verification by its ID.
+        
+        Args:
+            verification_id: ID of the verification
+            
+        Returns:
+            Verification data or None if not found
+        """
+        return self.pending_photo_verifications.get(verification_id)
+
     
     def use_hint(self, team_name: str, challenge_id: int, hint_index: int, user_id: int, user_name: str) -> bool:
         """Record hint usage for a team's challenge.
