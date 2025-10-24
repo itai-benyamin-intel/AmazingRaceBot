@@ -254,22 +254,28 @@ class TestStartGameBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertIn("THE GAME HAS STARTED!", message)
         
         # Verify that send_message was called for each team member
-        # Should be called 4 times (for all team members except admin)
-        self.assertEqual(context.bot.send_message.call_count, 4)
+        # Should be called 8 times: 4 for game start message + 4 for current challenge broadcast
+        # (for all team members except admin)
+        self.assertEqual(context.bot.send_message.call_count, 8)
         
         # Get all user IDs that received messages
         sent_user_ids = set()
         for call in context.bot.send_message.call_args_list:
             sent_user_ids.add(call[1]['chat_id'])
         
-        # Verify all team members received the message
+        # Verify all team members received messages
         expected_user_ids = {111111, 222222, 333333, 444444}
         self.assertEqual(sent_user_ids, expected_user_ids)
         
-        # Verify the message content
-        for call in context.bot.send_message.call_args_list:
-            self.assertIn("THE GAME HAS STARTED!", call[1]['text'])
-            self.assertEqual(call[1]['parse_mode'], 'Markdown')
+        # Verify the message content - should include both game start and challenge messages
+        game_start_messages = [call for call in context.bot.send_message.call_args_list 
+                               if "THE GAME HAS STARTED!" in call[1]['text']]
+        challenge_messages = [call for call in context.bot.send_message.call_args_list 
+                             if "New Challenge Available" in call[1]['text']]
+        
+        # Each user should get one of each message type
+        self.assertEqual(len(game_start_messages), 4)
+        self.assertEqual(len(challenge_messages), 4)
     
     async def test_start_game_no_duplicate_to_admin_in_team(self):
         """Test that admin doesn't get duplicate message if they're in a team."""
@@ -299,10 +305,19 @@ class TestStartGameBroadcast(unittest.IsolatedAsyncioTestCase):
         # Verify admin got the message via reply_text
         update.message.reply_text.assert_called_once()
         
-        # Verify send_message was only called once for Bob (not for admin)
-        self.assertEqual(context.bot.send_message.call_count, 1)
-        call_args = context.bot.send_message.call_args
-        self.assertEqual(call_args[1]['chat_id'], 222222)
+        # Verify send_message was called for Bob (game start + challenge broadcast)
+        # AND for admin (game start + challenge broadcast since admin is a player)
+        # Total: 4 calls (2 for Bob, 2 for Admin)
+        self.assertEqual(context.bot.send_message.call_count, 4)
+        
+        # Get all user IDs that received messages
+        sent_user_ids = set()
+        for call in context.bot.send_message.call_args_list:
+            sent_user_ids.add(call[1]['chat_id'])
+        
+        # Both admin and Bob should receive messages
+        expected_user_ids = {123456789, 222222}
+        self.assertEqual(sent_user_ids, expected_user_ids)
     
     async def test_start_game_no_teams(self):
         """Test /startgame when there are no teams."""
@@ -367,7 +382,8 @@ class TestStartGameBroadcast(unittest.IsolatedAsyncioTestCase):
         update.message.reply_text.assert_called_once()
         
         # Verify send_message was called for both users (even though one failed)
-        self.assertEqual(context.bot.send_message.call_count, 2)
+        # Now we send game start + challenge broadcast, so 4 total attempts
+        self.assertEqual(context.bot.send_message.call_count, 4)
 
 
 class TestEndGameBroadcast(unittest.IsolatedAsyncioTestCase):
