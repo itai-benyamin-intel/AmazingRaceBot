@@ -1,4 +1,4 @@
-# uCode Amazing Race - Telegram Bot
+# AmazingRaceBot - Telegram Bot
 
 A Telegram chatbot template for managing an Amazing Race game. This bot allows teams to register, track their progress through sequential challenges, and compete to finish first.
 
@@ -76,8 +76,8 @@ The winner is determined by **who finishes first**, not by points. Teams that co
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/itai-benyamin-intel/uCodeAmazingRace.git
-cd uCodeAmazingRace
+git clone https://github.com/itai-benyamin-intel/AmazingRaceBot.git
+cd AmazingRaceBot
 ```
 
 2. Install dependencies:
@@ -344,7 +344,7 @@ Edit `config.yml` to customize your game:
 
 ```yaml
 game:
-  name: "uCode Amazing Race"
+  name: "AmazingRaceBot"
   max_teams: 10
   max_team_size: 5
   
@@ -408,7 +408,7 @@ game:
 ## File Structure
 
 ```
-uCodeAmazingRace/
+AmazingRaceBot/
 ├── bot.py                 # Main bot implementation
 ├── game_state.py          # Game state management
 ├── config.yml             # Your configuration (create from example)
