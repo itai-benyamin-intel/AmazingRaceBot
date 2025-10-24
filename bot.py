@@ -1158,9 +1158,6 @@ class AmazingRaceBot:
                                 f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
                                 f"{unlock_time.strftime('%H:%M:%S')}"
                             )
-                        else:
-                            # No timeout - broadcast next challenge immediately to all team members
-                            await self.broadcast_current_challenge(context, team_name, user.id)
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
                     
@@ -1169,6 +1166,14 @@ class AmazingRaceBot:
                         context, team_name, challenge_id, challenge['name'],
                         user.id, user.first_name, completed, total
                     )
+                    
+                    # After completion message is sent, broadcast next challenge if no timeout
+                    if not team.get('finish_time'):
+                        next_challenge_id = challenge_id + 1
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                        if not unlock_time_str:
+                            # No timeout - broadcast next challenge to all team members (excluding submitter)
+                            await self.broadcast_current_challenge(context, team_name, user.id)
                 else:
                     await update.message.reply_text("Error completing challenge. Please try again.")
             else:
@@ -1840,54 +1845,52 @@ class AmazingRaceBot:
                     unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
                     has_timeout = unlock_time_str is not None
                 
-                # Notify team members
-                team_members = team['members']
-                for member in team_members:
-                    try:
-                        response = (
-                            f"✅ *Photo Approved!*\n\n"
-                            f"Your photo for *{challenge_name}* has been approved!\n"
-                            f"Progress: {completed}/{total} challenges"
-                        )
-                        
-                        # Check if team finished
-                        if team.get('finish_time'):
-                            response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
-                            response += f"Your team finished the race!\n"
-                            response += f"Finish time: {team['finish_time']}"
-                        else:
-                            # Check for hint penalty
-                            next_challenge_id = challenge_id + 1
-                            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
-                            if unlock_time_str:
-                                unlock_time = datetime.fromisoformat(unlock_time_str)
-                                hint_count = self.game_state.get_hint_count(team_name, challenge_id)
-                                penalty_minutes = hint_count * 2
-                                
-                                response += (
-                                    f"\n\n⏱️ *Hint Penalty Applied*\n"
-                                    f"You used {hint_count} hint(s) on this challenge.\n"
-                                    f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
-                                    f"{unlock_time.strftime('%H:%M:%S')}"
-                                )
-                        
-                        await context.bot.send_message(
-                            chat_id=member['id'],
-                            text=response,
-                            parse_mode='Markdown'
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to notify team member {member['id']}: {e}")
+                # Notify submitter that photo was approved
+                try:
+                    response = (
+                        f"✅ *Photo Approved!*\n\n"
+                        f"Your photo for *{challenge_name}* has been approved!\n"
+                        f"Progress: {completed}/{total} challenges"
+                    )
+                    
+                    # Check if team finished
+                    if team.get('finish_time'):
+                        response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
+                        response += f"Your team finished the race!\n"
+                        response += f"Finish time: {team['finish_time']}"
+                    else:
+                        # Check for hint penalty
+                        next_challenge_id = challenge_id + 1
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                        if unlock_time_str:
+                            unlock_time = datetime.fromisoformat(unlock_time_str)
+                            hint_count = self.game_state.get_hint_count(team_name, challenge_id)
+                            penalty_minutes = hint_count * 2
+                            
+                            response += (
+                                f"\n\n⏱️ *Hint Penalty Applied*\n"
+                                f"You used {hint_count} hint(s) on this challenge.\n"
+                                f"Next challenge unlocks in {penalty_minutes} minutes at:\n"
+                                f"{unlock_time.strftime('%H:%M:%S')}"
+                            )
+                    
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=response,
+                        parse_mode='Markdown'
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify submitter {user_id}: {e}")
                 
-                # If no timeout, broadcast next challenge to all team members
-                if not has_timeout and not team.get('finish_time'):
-                    await self.broadcast_current_challenge(context, team_name)
-                
-                # Broadcast completion to team and admin (excluding the notified members)
+                # Broadcast completion to team and admin (excluding submitter)
                 await self.broadcast_challenge_completion(
                     context, team_name, challenge_id, challenge_name,
                     user_id, user_name, completed, total
                 )
+                
+                # After completion message is sent, broadcast next challenge if no timeout
+                if not has_timeout and not team.get('finish_time'):
+                    await self.broadcast_current_challenge(context, team_name, user_id)
             else:
                 await query.edit_message_caption(
                     caption=query.message.caption + "\n\n❌ Failed to approve submission.",
