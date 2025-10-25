@@ -1492,24 +1492,20 @@ class AmazingRaceBot:
             await self._handle_photo_submission(update, context)
             return
         
-        # Check if this might be a photo verification for location arrival
+        # Check if this might be a photo verification for location arrival or challenge submission
         team_name = self.game_state.get_team_by_user(user.id)
         if not team_name:
             # No team, ignore the photo
             return
         
-        # Check if photo verification is enabled
-        if not self.game_state.photo_verification_enabled:
-            # Photo verification disabled, ignore
+        # Check if game is active
+        if not self.game_state.game_started or self.game_state.game_ended:
+            # Game not active, ignore the photo
             return
         
-        # Check if team is on a challenge that needs photo verification
+        # Get current challenge
         team = self.game_state.teams[team_name]
         current_challenge_index = team.get('current_challenge_index', 0)
-        
-        # Only for challenges 2 onwards (index 1+)
-        if current_challenge_index == 0:
-            return
         
         # Check if all challenges are completed
         if current_challenge_index >= len(self.challenges):
@@ -1518,73 +1514,90 @@ class AmazingRaceBot:
         current_challenge = self.challenges[current_challenge_index]
         challenge_id = current_challenge['id']
         
-        # Check if photo verification already done for this challenge
-        photo_verifications = team.get('photo_verifications', {})
-        if str(challenge_id) in photo_verifications:
-            # Already verified
-            await update.message.reply_text(
-                f"✅ Photo verification already completed for this challenge.\n"
-                f"Use /current to see the challenge details."
-            )
-            return
-        
-        # Check if there's already a pending verification for this team/challenge
-        pending_verifications = self.game_state.get_pending_photo_verifications()
-        for verification in pending_verifications.values():
-            if verification['team_name'] == team_name and verification['challenge_id'] == challenge_id:
-                await update.message.reply_text(
-                    f"⏳ You already have a pending photo verification for this challenge.\n"
-                    f"Please wait for admin approval."
+        # Check if photo verification is enabled and required for this challenge
+        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+            # Check if photo verification already done for this challenge
+            photo_verifications = team.get('photo_verifications', {})
+            if str(challenge_id) not in photo_verifications:
+                # Photo verification not done yet - this is a location verification photo
+                
+                # Check if there's already a pending verification for this team/challenge
+                pending_verifications = self.game_state.get_pending_photo_verifications()
+                for verification in pending_verifications.values():
+                    if verification['team_name'] == team_name and verification['challenge_id'] == challenge_id:
+                        await update.message.reply_text(
+                            f"⏳ You already have a pending photo verification for this challenge.\n"
+                            f"Please wait for admin approval."
+                        )
+                        return
+                
+                # Get the photo
+                photo = update.message.photo[-1]  # Get highest resolution
+                
+                # Store the photo verification as pending
+                verification_id = self.game_state.add_pending_photo_verification(
+                    team_name, challenge_id, photo.file_id, user.id, user.first_name
                 )
+                
+                # Notify the user that photo was submitted for verification
+                response = (
+                    f"📷 *Photo Verification Submitted*\n\n"
+                    f"Your photo for arriving at Challenge #{challenge_id} has been sent to the admin for verification.\n\n"
+                    f"The challenge details will be revealed once the admin approves your photo.\n"
+                    f"You will be notified when approved."
+                )
+                
+                await update.message.reply_text(response, parse_mode='Markdown')
+                
+                # Send photo to admin for verification with approval/rejection buttons
+                if self.admin_id:
+                    try:
+                        keyboard = [
+                            [
+                                InlineKeyboardButton("✅ Approve", callback_data=f"verify_approve_{verification_id}"),
+                                InlineKeyboardButton("❌ Reject", callback_data=f"verify_reject_{verification_id}")
+                            ]
+                        ]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        challenge_name = current_challenge.get('name', f'Challenge #{challenge_id}')
+                        
+                        await context.bot.send_photo(
+                            chat_id=self.admin_id,
+                            photo=photo.file_id,
+                            caption=(
+                                f"📷 *Photo Verification - Location Arrival*\n"
+                                f"Team: {team_name}\n"
+                                f"Challenge #{challenge_id}: {challenge_name}\n"
+                                f"Submitted by: {user.first_name}\n\n"
+                                f"Approve to reveal the challenge to the team.\n"
+                                f"Verification ID: `{verification_id}`"
+                            ),
+                            parse_mode='Markdown',
+                            reply_markup=reply_markup
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send photo verification to admin: {e}")
+                
                 return
         
-        # Get the photo
-        photo = update.message.photo[-1]  # Get highest resolution
+        # If we reach here, photo verification is either disabled or already done
+        # Check if current challenge requires a photo submission
+        verification = current_challenge.get('verification', {})
+        if verification.get('method') == 'photo':
+            # This is a photo challenge - treat the photo as a submission
+            # Store in pending_submissions and call _handle_photo_submission
+            context.bot_data['pending_submissions'][user.id] = {
+                'team_name': team_name,
+                'challenge_id': challenge_id,
+                'challenge_name': current_challenge['name']
+            }
+            
+            await self._handle_photo_submission(update, context)
+            return
         
-        # Store the photo verification as pending
-        verification_id = self.game_state.add_pending_photo_verification(
-            team_name, challenge_id, photo.file_id, user.id, user.first_name
-        )
-        
-        # Notify the user that photo was submitted for verification
-        response = (
-            f"📷 *Photo Verification Submitted*\n\n"
-            f"Your photo for arriving at Challenge #{challenge_id} has been sent to the admin for verification.\n\n"
-            f"The challenge details will be revealed once the admin approves your photo.\n"
-            f"You will be notified when approved."
-        )
-        
-        await update.message.reply_text(response, parse_mode='Markdown')
-        
-        # Send photo to admin for verification with approval/rejection buttons
-        if self.admin_id:
-            try:
-                keyboard = [
-                    [
-                        InlineKeyboardButton("✅ Approve", callback_data=f"verify_approve_{verification_id}"),
-                        InlineKeyboardButton("❌ Reject", callback_data=f"verify_reject_{verification_id}")
-                    ]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                
-                challenge_name = current_challenge.get('name', f'Challenge #{challenge_id}')
-                
-                await context.bot.send_photo(
-                    chat_id=self.admin_id,
-                    photo=photo.file_id,
-                    caption=(
-                        f"📷 *Photo Verification - Location Arrival*\n"
-                        f"Team: {team_name}\n"
-                        f"Challenge #{challenge_id}: {challenge_name}\n"
-                        f"Submitted by: {user.first_name}\n\n"
-                        f"Approve to reveal the challenge to the team.\n"
-                        f"Verification ID: `{verification_id}`"
-                    ),
-                    parse_mode='Markdown',
-                    reply_markup=reply_markup
-                )
-            except Exception as e:
-                logger.error(f"Failed to send photo verification to admin: {e}")
+        # Photo sent but current challenge doesn't require a photo
+        # Ignore it silently (user might be sending unrelated photos)
     
     async def _handle_photo_submission(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle photo submission for challenge completion."""
@@ -2064,6 +2077,19 @@ class AmazingRaceBot:
             elif waiting_command == 'removeteam':
                 context.args = user_input.split()
                 await self.removeteam_command(update, context)
+                return
+        
+        # Check if game is active and user is in a team - treat message as submission
+        if self.game_state.game_started and not self.game_state.game_ended:
+            user = update.effective_user
+            team_name = self.game_state.get_team_by_user(user.id)
+            
+            if team_name:
+                # User is in a team during an active game
+                # Treat this message as a submission
+                user_input = update.message.text.strip()
+                context.args = user_input.split()
+                await self.submit_command(update, context)
                 return
         
         # Send helpful message
