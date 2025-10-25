@@ -16,7 +16,6 @@ class GameState:
         self.challenges: Dict[int, Dict] = {}
         self.game_started: bool = False
         self.game_ended: bool = False
-        self.location_verification_enabled: bool = False
         self.photo_verification_enabled: bool = False
         self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
         self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
@@ -33,7 +32,6 @@ class GameState:
                     self.challenges = data.get('challenges', {})
                     self.game_started = data.get('game_started', False)
                     self.game_ended = data.get('game_ended', False)
-                    self.location_verification_enabled = data.get('location_verification_enabled', False)
                     self.photo_verification_enabled = data.get('photo_verification_enabled', False)
                     self.hint_usage = data.get('hint_usage', {})
                     self.pending_photo_submissions = data.get('pending_photo_submissions', {})
@@ -49,7 +47,6 @@ class GameState:
                 'challenges': self.challenges,
                 'game_started': self.game_started,
                 'game_ended': self.game_ended,
-                'location_verification_enabled': self.location_verification_enabled,
                 'photo_verification_enabled': self.photo_verification_enabled,
                 'hint_usage': self.hint_usage,
                 'pending_photo_submissions': self.pending_photo_submissions,
@@ -185,7 +182,6 @@ class GameState:
         self.challenges = {}
         self.game_started = False
         self.game_ended = False
-        self.location_verification_enabled = False
         self.photo_verification_enabled = False
         self.hint_usage = {}
         self.pending_photo_submissions = {}
@@ -270,25 +266,6 @@ class GameState:
         
         self.save_state()
         return True
-    
-    def toggle_location_verification(self) -> bool:
-        """Toggle location verification on/off.
-        
-        Returns:
-            New state of location verification (True if enabled, False if disabled)
-        """
-        self.location_verification_enabled = not self.location_verification_enabled
-        self.save_state()
-        return self.location_verification_enabled
-    
-    def set_location_verification(self, enabled: bool) -> None:
-        """Set location verification state.
-        
-        Args:
-            enabled: True to enable, False to disable
-        """
-        self.location_verification_enabled = enabled
-        self.save_state()
     
     def toggle_photo_verification(self) -> bool:
         """Toggle photo verification on/off.
