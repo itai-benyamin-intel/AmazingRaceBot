@@ -1587,6 +1587,9 @@ class AmazingRaceBot:
         if verification.get('method') == 'photo':
             # This is a photo challenge - treat the photo as a submission
             # Store in pending_submissions and call _handle_photo_submission
+            if 'pending_submissions' not in context.bot_data:
+                context.bot_data['pending_submissions'] = {}
+            
             context.bot_data['pending_submissions'][user.id] = {
                 'team_name': team_name,
                 'challenge_id': challenge_id,
@@ -2087,6 +2090,7 @@ class AmazingRaceBot:
             if team_name:
                 # User is in a team during an active game
                 # Treat this message as a submission
+                # Note: We set context.args to simulate the /submit command being called with the message as the answer
                 user_input = update.message.text.strip()
                 context.args = user_input.split()
                 await self.submit_command(update, context)
