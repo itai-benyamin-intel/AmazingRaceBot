@@ -179,6 +179,228 @@ class TestPhotoVerification(unittest.TestCase):
         self.assertEqual(verification['status'], 'rejected')
 
 
+class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
+    """Test cases for photo verification bypass prevention."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_config_file = "test_bypass_config.yml"
+        self.test_state_file = "test_bypass_state.json"
+        
+        self.config = {
+            'telegram': {'bot_token': 'test_token'},
+            'game': {
+                'name': 'Test Game',
+                'max_teams': 10,
+                'max_team_size': 5,
+                'photo_verification_enabled': False,
+                'challenges': [
+                    {
+                        'id': 1,
+                        'name': 'Challenge 1',
+                        'description': 'First challenge',
+                        'location': 'Start',
+                        'type': 'riddle',
+                        'verification': {'method': 'answer', 'answer': 'test1'}
+                    },
+                    {
+                        'id': 2,
+                        'name': 'Challenge 2',
+                        'description': 'Second challenge',
+                        'location': 'Location 2',
+                        'type': 'riddle',
+                        'verification': {'method': 'answer', 'answer': 'test2'}
+                    },
+                    {
+                        'id': 3,
+                        'name': 'Challenge 3',
+                        'description': 'Third challenge',
+                        'location': 'Location 3',
+                        'type': 'trivia',
+                        'verification': {'method': 'answer', 'answer': 'test3'}
+                    }
+                ]
+            },
+            'admin': 123456789
+        }
+        
+    def tearDown(self):
+        """Clean up test files."""
+        if os.path.exists(self.test_config_file):
+            os.remove(self.test_config_file)
+        if os.path.exists(self.test_state_file):
+            os.remove(self.test_state_file)
+        if os.path.exists("game_state.json"):
+            os.remove("game_state.json")
+    
+    async def test_submit_answer_requires_photo_verification_when_enabled(self):
+        """Test that submitting an answer requires photo verification when enabled."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Enable photo verification
+        bot.game_state.set_photo_verification(True)
+        
+        # Create team and complete first challenge
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.complete_challenge("Team A", 1, 3, {'type': 'answer'})
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test2']  # Correct answer for challenge 2
+        context.bot_data = {}
+        
+        # Try to submit answer without photo verification
+        await bot.submit_command(update, context)
+        
+        # Verify challenge was NOT completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        self.assertNotIn(2, team['completed_challenges'])
+        
+        # Verify photo verification message was sent
+        update.message.reply_text.assert_called_once()
+        call_args = update.message.reply_text.call_args[0][0]
+        self.assertIn("Photo Verification Required", call_args)
+        self.assertIn("Before you can submit an answer to this challenge", call_args)
+    
+    async def test_submit_answer_works_after_photo_verification(self):
+        """Test that submitting an answer works after photo verification."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Enable photo verification
+        bot.game_state.set_photo_verification(True)
+        
+        # Create team and complete first challenge
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.complete_challenge("Team A", 1, 3, {'type': 'answer'})
+        
+        # Add photo verification for challenge 2
+        team = bot.game_state.teams["Team A"]
+        team['photo_verifications'] = {
+            '2': {
+                'verified_by': 111111,
+                'user_name': 'Alice',
+                'photo_id': 'test_photo_id',
+                'timestamp': '2024-01-01T00:00:00'
+            }
+        }
+        bot.game_state.save_state()
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test2']  # Correct answer for challenge 2
+        context.bot_data = {}
+        
+        # Submit answer with photo verification done
+        await bot.submit_command(update, context)
+        
+        # Verify challenge WAS completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 2)
+        self.assertIn(2, team['completed_challenges'])
+        
+        # Verify success message was sent
+        update.message.reply_text.assert_called()
+        call_args = update.message.reply_text.call_args[0][0]
+        self.assertIn("Correct!", call_args)
+    
+    async def test_first_challenge_does_not_require_photo_verification(self):
+        """Test that the first challenge does not require photo verification."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Enable photo verification
+        bot.game_state.set_photo_verification(True)
+        
+        # Create team
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test1']  # Correct answer for challenge 1
+        context.bot_data = {}
+        
+        # Submit answer for first challenge (should work without photo verification)
+        await bot.submit_command(update, context)
+        
+        # Verify challenge WAS completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 1)
+        self.assertIn(1, team['completed_challenges'])
+        
+        # Verify success message was sent
+        update.message.reply_text.assert_called()
+        call_args = update.message.reply_text.call_args[0][0]
+        self.assertIn("Correct!", call_args)
+    
+    async def test_photo_verification_disabled_allows_submission(self):
+        """Test that photo verification can be disabled."""
+        with open(self.test_config_file, 'w') as f:
+            yaml.dump(self.config, f)
+        
+        bot = AmazingRaceBot(self.test_config_file)
+        bot.game_state.start_game()
+        
+        # Photo verification should be disabled by default
+        self.assertFalse(bot.game_state.photo_verification_enabled)
+        
+        # Create team and complete first challenge
+        bot.game_state.create_team("Team A", 111111, "Alice")
+        bot.game_state.complete_challenge("Team A", 1, 3, {'type': 'answer'})
+        
+        # Mock the update and context
+        update = MagicMock()
+        update.effective_user = MagicMock()
+        update.effective_user.id = 111111
+        update.effective_user.first_name = "Alice"
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        
+        context = MagicMock()
+        context.args = ['test2']  # Correct answer for challenge 2
+        context.bot_data = {}
+        
+        # Submit answer without photo verification (should work when disabled)
+        await bot.submit_command(update, context)
+        
+        # Verify challenge WAS completed
+        team = bot.game_state.teams["Team A"]
+        self.assertEqual(len(team['completed_challenges']), 2)
+        self.assertIn(2, team['completed_challenges'])
+
+
 class TestPhotoVerificationCommands(unittest.IsolatedAsyncioTestCase):
     """Test cases for photo verification commands."""
     
