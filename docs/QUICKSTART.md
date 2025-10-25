@@ -139,4 +139,4 @@ challenges:
 
 - Check README.md for detailed documentation
 - Review config.example.yml for configuration options
-- Test with test_game_state.py to verify installation
+- Run tests with `python -m unittest discover -s tests` to verify installation
