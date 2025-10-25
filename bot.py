@@ -370,19 +370,23 @@ class AmazingRaceBot:
             chat_id: Telegram chat ID to send message to
             context: Telegram context (for bot.send_message), optional
             update: Telegram update (for message.reply_text), optional
+            
+        Note: At least one of context or update must be provided.
         """
         success_message = challenge.get('success_message')
-        if success_message:
-            if update and hasattr(update, 'message'):
-                # Use reply_text if we have an update with a message
-                await update.message.reply_text(success_message, parse_mode='Markdown')
-            elif context:
-                # Use send_message if we only have context
-                await context.bot.send_message(
-                    chat_id=chat_id,
-                    text=success_message,
-                    parse_mode='Markdown'
-                )
+        if not success_message:
+            return
+        
+        if update and update.message:
+            # Use reply_text if we have an update with a message
+            await update.message.reply_text(success_message, parse_mode='Markdown')
+        elif context:
+            # Use send_message if we only have context
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=success_message,
+                parse_mode='Markdown'
+            )
     
     async def broadcast_challenge_completion(self, context: ContextTypes.DEFAULT_TYPE, 
                                             team_name: str, challenge_id: int, 
