@@ -1182,6 +1182,11 @@ class AmazingRaceBot:
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
                     
+                    # Send custom success message if configured
+                    success_message = challenge.get('success_message')
+                    if success_message:
+                        await update.message.reply_text(success_message, parse_mode='Markdown')
+                    
                     # Broadcast completion to team and admin
                     await self.broadcast_challenge_completion(
                         context, team_name, challenge_id, challenge['name'],
@@ -1915,6 +1920,16 @@ class AmazingRaceBot:
                         text=response,
                         parse_mode='Markdown'
                     )
+                    
+                    # Send custom success message if configured
+                    challenge = self.challenges[challenge_id - 1]
+                    success_message = challenge.get('success_message')
+                    if success_message:
+                        await context.bot.send_message(
+                            chat_id=user_id,
+                            text=success_message,
+                            parse_mode='Markdown'
+                        )
                 except Exception as e:
                     logger.error(f"Failed to notify submitter {user_id}: {e}")
                 

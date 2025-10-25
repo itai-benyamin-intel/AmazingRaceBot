@@ -54,6 +54,9 @@ game:
         - "Look for the tallest building in the area"
         - "The viewpoint is near the waterfront"
         - "Check the tourist information center for directions"
+      # Optional: Custom success message shown after completing the challenge
+      # This message is sent in addition to the standard completion confirmation
+      success_message: "🎉 Great job finding the landmark! Head to the library for your next challenge."
       
     - id: 2
       name: "Riddle Master"
@@ -70,6 +73,7 @@ game:
       hints:
         - "Think about where students study"
         - "It's a building full of books"
+      success_message: "🧩 Excellent! The library it is. Your next challenge involves some coding skills!"
       
     - id: 3
       name: "Code Debug"
