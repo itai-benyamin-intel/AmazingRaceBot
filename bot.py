@@ -1095,6 +1095,27 @@ class AmazingRaceBot:
                     )
                     return
         
+        # Check if photo verification is required and not yet done (for challenges 2+)
+        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+            photo_verifications = team.get('photo_verifications', {})
+            if str(challenge_id) not in photo_verifications:
+                # Photo verification not done yet - cannot submit answer
+                message = (
+                    f"📷 *Photo Verification Required*\n\n"
+                    f"*Challenge #{challenge_id}: {challenge['name']}*\n\n"
+                    f"Before you can submit an answer to this challenge, you need to send a photo of your team at the challenge location.\n\n"
+                    f"📍 Location: {challenge['location']}\n\n"
+                    f"*Instructions:*\n"
+                    f"1. Go to the challenge location\n"
+                    f"2. Take a photo of your team there\n"
+                    f"3. Send the photo to this bot\n"
+                    f"4. Wait for admin approval\n"
+                    f"5. After approval, you can submit your answer\n\n"
+                    f"⏱️ Note: The timeout/penalty timer will only start after your photo is approved."
+                )
+                await update.message.reply_text(message, parse_mode='Markdown')
+                return
+        
         # Get verification method
         verification = challenge.get('verification', {})
         method = verification.get('method', 'photo')
