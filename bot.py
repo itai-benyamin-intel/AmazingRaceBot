@@ -360,6 +360,34 @@ class AmazingRaceBot:
             except Exception as e:
                 logger.error(f"Failed to send challenge broadcast to user {member_id}: {e}")
     
+    async def send_success_message_if_configured(self, challenge: dict, chat_id: int, 
+                                                  context: ContextTypes.DEFAULT_TYPE = None,
+                                                  update: Update = None):
+        """Send custom success message if configured for the challenge.
+        
+        Args:
+            challenge: Challenge configuration dict
+            chat_id: Telegram chat ID to send message to
+            context: Telegram context (for bot.send_message), optional
+            update: Telegram update (for message.reply_text), optional
+            
+        Note: At least one of context or update must be provided.
+        """
+        success_message = challenge.get('success_message')
+        if not success_message:
+            return
+        
+        if update and update.message:
+            # Use reply_text if we have an update with a message
+            await update.message.reply_text(success_message, parse_mode='Markdown')
+        elif context:
+            # Use send_message if we only have context
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=success_message,
+                parse_mode='Markdown'
+            )
+    
     async def broadcast_challenge_completion(self, context: ContextTypes.DEFAULT_TYPE, 
                                             team_name: str, challenge_id: int, 
                                             challenge_name: str, submitted_by_id: int,
@@ -1182,6 +1210,9 @@ class AmazingRaceBot:
                     
                     await update.message.reply_text(response, parse_mode='Markdown')
                     
+                    # Send custom success message if configured
+                    await self.send_success_message_if_configured(challenge, user.id, update=update)
+                    
                     # Broadcast completion to team and admin
                     await self.broadcast_challenge_completion(
                         context, team_name, challenge_id, challenge['name'],
@@ -1915,6 +1946,10 @@ class AmazingRaceBot:
                         text=response,
                         parse_mode='Markdown'
                     )
+                    
+                    # Send custom success message if configured
+                    challenge = self.challenges[challenge_id - 1]
+                    await self.send_success_message_if_configured(challenge, user_id, context=context)
                 except Exception as e:
                     logger.error(f"Failed to notify submitter {user_id}: {e}")
                 
