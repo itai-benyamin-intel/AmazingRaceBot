@@ -411,12 +411,21 @@ game:
 AmazingRaceBot/
 ├── bot.py                 # Main bot implementation
 ├── game_state.py          # Game state management
+├── run_bot.py             # Bot runner script
 ├── config.yml             # Your configuration (create from example)
 ├── config.example.yml     # Example configuration
 ├── requirements.txt       # Python dependencies
-├── test_game_state.py     # Unit tests
 ├── game_state.json        # Persistent game state (auto-generated)
-└── README.md             # This file
+├── tests/                 # Unit tests
+│   ├── test_game_state.py
+│   ├── test_bot.py
+│   └── ...
+├── docs/                  # Additional documentation
+│   ├── QUICKSTART.md
+│   ├── CHANGELOG.md
+│   └── ...
+├── commands.md            # Command reference
+└── README.md              # This file
 ```
 
 ## Features Explained
