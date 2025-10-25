@@ -294,50 +294,6 @@ When a team sends a location photo:
 - Teams control when they send photos
 - Photo verification can be disabled at any time by the admin
 
-## Location-Based Verification (Legacy)
-
-> **Note:** Location-based verification has been replaced by Photo Verification for most use cases. Photo verification provides better proof that teams are at the correct location. The location verification code remains for backward compatibility with existing configurations, but the `/togglelocation` command has been removed.
-
-The bot includes GPS-based location verification code that can verify teams are within a specific radius of challenge locations. However, this feature is no longer actively maintained in favor of the more robust Photo Verification system.
-
-### GPS Location Handler
-
-The location handler remains functional and will:
-1. Accept GPS location shares from teams
-2. Calculate distance using the Haversine formula
-3. Verify teams are within the configured radius (default: 100m)
-4. Store verification in team data
-
-However, there is no command to toggle this feature on/off. It's controlled by the `location_verification_enabled` flag in the game state, which can only be set programmatically.
-
-**For teams using GPS location verification:**
-1. In the chat, tap the attachment button (📎)
-2. Select "Location"
-3. Choose "Send My Current Location"
-4. Wait for the bot to verify your location
-
-**Configure Challenge Coordinates in config.yml:**
-```yaml
-game:
-  location_verification_enabled: true  # Must be set in config or programmatically
-  
-  challenges:
-    - id: 2
-      name: "Library Challenge"
-      # ... other fields ...
-      coordinates:
-        latitude: 37.7749
-        longitude: -122.4194
-        radius: 100  # meters
-```
-
-### Privacy Considerations
-
-- Location data is only used for verification during the game
-- Locations are stored temporarily in the game state
-- Teams can choose to share their location only when needed
-- Location verification can be disabled at any time by the admin
-
 ## Configuration
 
 Edit `config.yml` to customize your game:
@@ -398,10 +354,6 @@ game:
   - Each hint costs 2 minutes penalty (max 6 minutes total)
   - Hints are revealed sequentially (one at a time)
   - Teams can request hints using `/hint`
-- **coordinates**: (optional) GPS coordinates for location verification
-  - **latitude**: Latitude coordinate (-90 to 90)
-  - **longitude**: Longitude coordinate (-180 to 180)
-  - **radius**: Verification radius in meters (default: 100)
 
 **Note**: Challenges are completed sequentially based on their ID order (1, 2, 3, etc.)
 
@@ -524,16 +476,9 @@ The bot supports automatic verification for challenges:
 - Case-insensitive comparison
 
 **Customizing Verification:**
-You can customize verification logic in the `verify_answer` method in `bot.py`. The bot now includes:
-- **Location-based verification**: GPS coordinate verification using Haversine formula
+You can customize verification logic in the `verify_answer` method in `bot.py`. The bot includes:
 - **Answer verification**: Exact match or keyword matching (case-insensitive)
 - **Photo verification**: Manual admin approval with notification
-
-For location verification:
-- Distance is calculated using the Haversine formula for accuracy
-- Teams must be within the configured radius (default 100m)
-- Verification is skipped for Challenge 1
-- Can be toggled on/off globally by admins
 
 ## Troubleshooting
 

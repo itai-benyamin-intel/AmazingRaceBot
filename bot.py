@@ -3,7 +3,6 @@ Telegram Amazing Race Bot - Main bot implementation
 """
 import logging
 import yaml
-import math
 from datetime import datetime
 from typing import Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, PhotoSize
@@ -41,19 +40,6 @@ class AmazingRaceBot:
         else:
             # New format: single admin ID
             self.admin_id = admin_config
-        
-        # Load location verification setting from config, but allow runtime override via game_state
-        config_location_enabled = self.config['game'].get('location_verification_enabled', False)
-        # If game_state has a saved value, use it; otherwise use config value
-        if hasattr(self.game_state, 'location_verification_enabled'):
-            # Sync with config on first load if not set
-            if not hasattr(self, '_location_synced'):
-                if self.game_state.location_verification_enabled is False and config_location_enabled:
-                    self.game_state.set_location_verification(config_location_enabled)
-        else:
-            # Fallback for older game states
-            self.game_state.location_verification_enabled = config_location_enabled
-            self.game_state.save_state()
     
     @staticmethod
     def load_config(config_file: str) -> dict:
@@ -68,63 +54,6 @@ class AmazingRaceBot:
     def is_admin(self, user_id: int) -> bool:
         """Check if user is an admin."""
         return self.admin_id is not None and user_id == self.admin_id
-    
-    @staticmethod
-    def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-        """Calculate distance between two GPS coordinates using Haversine formula.
-        
-        Args:
-            lat1: Latitude of first point
-            lon1: Longitude of first point
-            lat2: Latitude of second point
-            lon2: Longitude of second point
-            
-        Returns:
-            Distance in meters
-        """
-        # Earth's radius in meters
-        R = 6371000
-        
-        # Convert to radians
-        lat1_rad = math.radians(lat1)
-        lat2_rad = math.radians(lat2)
-        delta_lat = math.radians(lat2 - lat1)
-        delta_lon = math.radians(lon2 - lon1)
-        
-        # Haversine formula
-        a = math.sin(delta_lat / 2) ** 2 + \
-            math.cos(lat1_rad) * math.cos(lat2_rad) * \
-            math.sin(delta_lon / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        
-        return R * c
-    
-    def verify_location(self, user_lat: float, user_lon: float, challenge: dict) -> tuple[bool, float]:
-        """Verify if user's location is within the challenge's required radius.
-        
-        Args:
-            user_lat: User's latitude
-            user_lon: User's longitude
-            challenge: Challenge configuration with coordinates
-            
-        Returns:
-            Tuple of (is_within_radius, distance_in_meters)
-        """
-        coordinates = challenge.get('coordinates', {})
-        if not coordinates:
-            # No coordinates specified, skip verification
-            return True, 0
-        
-        target_lat = coordinates.get('latitude')
-        target_lon = coordinates.get('longitude')
-        radius = coordinates.get('radius', 100)  # Default 100m radius
-        
-        if target_lat is None or target_lon is None:
-            # Coordinates not properly configured, skip verification
-            return True, 0
-        
-        distance = self.calculate_distance(user_lat, user_lon, target_lat, target_lon)
-        return distance <= radius, distance
     
     def get_challenge_type_emoji(self, challenge_type: str) -> str:
         """Get emoji representation for challenge type."""
@@ -2001,99 +1930,6 @@ class AmazingRaceBot:
                 parse_mode='Markdown'
             )
 
-    async def location_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle location submissions for challenge verification."""
-        user = update.effective_user
-        location = update.message.location
-        
-        if not location:
-            return
-        
-        user_lat = location.latitude
-        user_lon = location.longitude
-        
-        # Check if user is in a team
-        team_name = self.game_state.get_team_by_user(user.id)
-        if not team_name:
-            await update.message.reply_text(
-                "You are not in any team! Use /createteam or /jointeam first."
-            )
-            return
-        
-        # Check if location verification is enabled
-        if not self.game_state.location_verification_enabled:
-            await update.message.reply_text(
-                "📍 Location received!\n\n"
-                "ℹ️ Location verification is currently disabled.\n"
-                "Your location has been recorded but is not required for challenge progression."
-            )
-            return
-        
-        # Get team's current challenge
-        team = self.game_state.teams[team_name]
-        current_challenge_index = team.get('current_challenge_index', 0)
-        
-        # Skip verification for challenge 1 (starting point)
-        if current_challenge_index == 0:
-            await update.message.reply_text(
-                "📍 Location received!\n\n"
-                "ℹ️ Challenge 1 is the starting point - no location verification required.\n"
-                "Complete Challenge 1 to unlock the next challenge!"
-            )
-            return
-        
-        # Check if team has completed all challenges
-        if current_challenge_index >= len(self.challenges):
-            await update.message.reply_text(
-                "🏆 Your team has completed all challenges!\n"
-                "Location verification is not needed."
-            )
-            return
-        
-        # Get the current challenge (the one they need to verify location for)
-        current_challenge = self.challenges[current_challenge_index]
-        
-        # Verify location
-        is_valid, distance = self.verify_location(user_lat, user_lon, current_challenge)
-        
-        coordinates = current_challenge.get('coordinates', {})
-        radius = coordinates.get('radius', 100)
-        
-        if is_valid:
-            # Store location verification in team data
-            if 'location_verifications' not in team:
-                team['location_verifications'] = {}
-            
-            team['location_verifications'][str(current_challenge['id'])] = {
-                'verified_by': user.id,
-                'user_name': user.first_name,
-                'latitude': user_lat,
-                'longitude': user_lon,
-                'distance': distance,
-                'timestamp': datetime.now().isoformat()
-            }
-            self.game_state.save_state()
-            
-            response = (
-                f"✅ *Location Verified!*\n\n"
-                f"You are within {distance:.1f}m of the challenge location.\n"
-                f"Challenge: *{current_challenge['name']}*\n"
-                f"Location: {current_challenge['location']}\n\n"
-                f"You can now complete this challenge!\n"
-                f"Use /submit [answer] to submit your answer."
-            )
-            await update.message.reply_text(response, parse_mode='Markdown')
-        else:
-            response = (
-                f"❌ *Location Not Verified*\n\n"
-                f"You are {distance:.1f}m away from the challenge location.\n"
-                f"Required: Within {radius}m\n\n"
-                f"Challenge: *{current_challenge['name']}*\n"
-                f"Location: {current_challenge['location']}\n\n"
-                f"Please move closer to the location and share your location again."
-            )
-            await update.message.reply_text(response, parse_mode='Markdown')
-    
     async def approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle the /approve command (admin only) - approve pending photo submissions."""
         user = update.effective_user
@@ -2288,9 +2124,6 @@ class AmazingRaceBot:
         
         # Add photo handler for photo submissions
         application.add_handler(MessageHandler(filters.PHOTO, self.photo_handler))
-        
-        # Add location handler for location verification
-        application.add_handler(MessageHandler(filters.LOCATION, self.location_handler))
         
         # Add handler for unrecognized text messages (must be last)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unrecognized_message_handler))
