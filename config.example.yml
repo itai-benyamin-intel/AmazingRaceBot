@@ -85,6 +85,25 @@ game:
         answer: "turing, lovelace, babbage"  # Accept if contains these names
       
     - id: 6
+      name: "Capital Cities Checklist"
+      description: "Name 5 capital cities from different continents"
+      location: "Anywhere"
+      type: "trivia"
+      verification:
+        method: "answer"
+        # Checklist mode: participants can submit items one at a time or all at once
+        # Each item is tracked individually, and the challenge completes when all items are submitted
+        checklist_items:
+          - "Tokyo"
+          - "Paris"
+          - "Cairo"
+          - "Brasilia"
+          - "Canberra"
+      hints:
+        - "Think about each continent: Asia, Europe, Africa, South America, Australia"
+        - "Japan's capital, France's capital, Egypt's capital..."
+      
+    - id: 7
       name: "Team Pyramid"
       description: "Create a human pyramid with your team"
       location: "Outdoor Area"
@@ -92,7 +111,7 @@ game:
       verification:
         method: "photo"
       
-    - id: 7
+    - id: 8
       name: "Scavenger Hunt"
       description: "Find and photograph 5 different types of transportation in the area"
       location: "Campus Area"
@@ -100,7 +119,7 @@ game:
       verification:
         method: "photo"
       
-    - id: 8
+    - id: 9
       name: "Secret Message"
       description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
       location: "Anywhere"

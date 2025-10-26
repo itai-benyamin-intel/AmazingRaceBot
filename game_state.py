@@ -640,4 +640,74 @@ class GameState:
             Submission data or None if not found
         """
         return self.pending_photo_submissions.get(submission_id)
+    
+    def get_checklist_progress(self, team_name: str, challenge_id: int) -> Dict[str, bool]:
+        """Get checklist progress for a team's challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Dictionary mapping checklist items to completion status
+        """
+        if team_name not in self.teams:
+            return {}
+        
+        team_data = self.teams[team_name]
+        checklist_progress = team_data.get('checklist_progress', {})
+        return checklist_progress.get(str(challenge_id), {})
+    
+    def update_checklist_item(self, team_name: str, challenge_id: int, item: str, completed: bool = True) -> bool:
+        """Update completion status of a checklist item.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            item: The checklist item text
+            completed: Whether the item is completed
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if team_name not in self.teams:
+            return False
+        
+        team_data = self.teams[team_name]
+        
+        # Initialize checklist_progress if it doesn't exist
+        if 'checklist_progress' not in team_data:
+            team_data['checklist_progress'] = {}
+        
+        challenge_key = str(challenge_id)
+        if challenge_key not in team_data['checklist_progress']:
+            team_data['checklist_progress'][challenge_key] = {}
+        
+        # Update the item status
+        team_data['checklist_progress'][challenge_key][item] = completed
+        self.save_state()
+        return True
+    
+    def is_checklist_complete(self, team_name: str, challenge_id: int, checklist_items: List[str]) -> bool:
+        """Check if all checklist items are completed.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            checklist_items: List of all checklist items
+            
+        Returns:
+            True if all items are completed, False otherwise
+        """
+        if team_name not in self.teams:
+            return False
+        
+        progress = self.get_checklist_progress(team_name, challenge_id)
+        
+        # Check if all items are marked as completed
+        for item in checklist_items:
+            if not progress.get(item, False):
+                return False
+        
+        return True
 
