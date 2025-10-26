@@ -10,7 +10,12 @@ from game_state import GameState
 
 
 class MockBot:
-    """Mock bot for testing challenge type methods."""
+    """Mock bot for testing challenge type methods.
+    
+    Note: This mock intentionally duplicates the verification logic from bot.py
+    to ensure tests remain isolated and don't depend on the full bot implementation.
+    The logic should be kept in sync with bot.py's verify_answer method.
+    """
     
     def __init__(self, challenges):
         self.challenges = challenges
