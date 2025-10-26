@@ -55,6 +55,27 @@ class AmazingRaceBot:
         """Check if user is an admin."""
         return self.admin_id is not None and user_id == self.admin_id
     
+    def requires_photo_verification(self, challenge: dict, challenge_index: int) -> bool:
+        """Check if photo verification is required for a specific challenge.
+        
+        Args:
+            challenge: Challenge configuration dict
+            challenge_index: 0-based index of the challenge
+            
+        Returns:
+            True if photo verification is required, False otherwise
+        """
+        # Challenge 1 (index 0) never requires photo verification
+        if challenge_index == 0:
+            return False
+        
+        # Check if challenge has explicit requires_photo_verification setting
+        if 'requires_photo_verification' in challenge:
+            return challenge['requires_photo_verification']
+        
+        # Fall back to global setting for challenges 2+ (backward compatibility)
+        return self.game_state.photo_verification_enabled
+    
     def get_challenge_type_emoji(self, challenge_type: str) -> str:
         """Get emoji representation for challenge type."""
         type_emojis = {
@@ -328,8 +349,8 @@ class AmazingRaceBot:
         challenge = self.challenges[current_challenge_index]
         challenge_id = challenge['id']
         
-        # Check if photo verification is required and not yet done (for challenges 2+)
-        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+        # Check if photo verification is required and not yet done
+        if self.requires_photo_verification(challenge, current_challenge_index):
             photo_verifications = team_data.get('photo_verifications', {})
             if str(challenge_id) not in photo_verifications:
                 # Photo verification not done yet - don't broadcast challenge details
@@ -903,8 +924,8 @@ class AmazingRaceBot:
         challenge = self.challenges[current_challenge_index]
         challenge_id = challenge['id']
         
-        # Check if photo verification is required and not yet done (for challenges 2+)
-        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+        # Check if photo verification is required and not yet done
+        if self.requires_photo_verification(challenge, current_challenge_index):
             photo_verifications = team.get('photo_verifications', {})
             if str(challenge_id) not in photo_verifications:
                 # Photo verification not done yet
@@ -1251,8 +1272,8 @@ class AmazingRaceBot:
                     )
                     return
         
-        # Check if photo verification is required and not yet done (for challenges 2+)
-        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+        # Check if photo verification is required and not yet done
+        if self.requires_photo_verification(challenge, current_challenge_index):
             photo_verifications = team.get('photo_verifications', {})
             if str(challenge_id) not in photo_verifications:
                 # Photo verification not done yet - cannot submit answer
@@ -1356,7 +1377,8 @@ class AmazingRaceBot:
                         # Check if photo verification is needed for next challenge
                         if next_challenge_id <= len(self.challenges):
                             next_challenge_index = team.get('current_challenge_index', 0)
-                            if self.game_state.photo_verification_enabled and next_challenge_index > 0:
+                            next_challenge = self.challenges[next_challenge_index]
+                            if self.requires_photo_verification(next_challenge, next_challenge_index):
                                 photo_verifications = team.get('photo_verifications', {})
                                 if str(next_challenge_id) not in photo_verifications:
                                     photo_verification_needed = True
@@ -1775,8 +1797,8 @@ class AmazingRaceBot:
         current_challenge = self.challenges[current_challenge_index]
         challenge_id = current_challenge['id']
         
-        # Check if photo verification is enabled and required for this challenge
-        if self.game_state.photo_verification_enabled and current_challenge_index > 0:
+        # Check if photo verification is required for this challenge
+        if self.requires_photo_verification(current_challenge, current_challenge_index):
             # Check if photo verification already done for this challenge
             photo_verifications = team.get('photo_verifications', {})
             if str(challenge_id) not in photo_verifications:
@@ -2171,7 +2193,8 @@ class AmazingRaceBot:
                     # Check if photo verification is needed for next challenge
                     if next_challenge_id <= len(self.challenges):
                         next_challenge_index = team.get('current_challenge_index', 0)
-                        if self.game_state.photo_verification_enabled and next_challenge_index > 0:
+                        next_challenge = self.challenges[next_challenge_index]
+                        if self.requires_photo_verification(next_challenge, next_challenge_index):
                             photo_verifications = team.get('photo_verifications', {})
                             if str(next_challenge_id) not in photo_verifications:
                                 photo_verification_needed = True
