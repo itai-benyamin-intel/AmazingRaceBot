@@ -700,6 +700,31 @@ class AmazingRaceBot:
                 f"✅ You joined team '{team_name}'!\n"
                 f"Team members: {len(team['members']) + 1}/{self.config['game']['max_team_size']}"
             )
+            
+            # Broadcast to existing team members (excluding the new joiner)
+            team_data = self.game_state.teams[team_name]
+            broadcast_message = (
+                f"👥 *New Team Member!*\n\n"
+                f"Welcome *{user.first_name}* to team '{team_name}'! 🎉\n\n"
+                f"Team size: {len(team_data['members'])}/{self.config['game']['max_team_size']}"
+            )
+            
+            sent_to_users = set()
+            for member in team_data['members']:
+                member_id = member['id']
+                # Skip the user who just joined (they already got a confirmation message)
+                if member_id == user.id or member_id in sent_to_users:
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        chat_id=member_id,
+                        text=broadcast_message,
+                        parse_mode='Markdown'
+                    )
+                    sent_to_users.add(member_id)
+                except Exception as e:
+                    logger.error(f"Failed to send team join notification to user {member_id}: {e}")
         else:
             await update.message.reply_text("You are already in a team!")
     
