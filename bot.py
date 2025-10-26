@@ -97,6 +97,60 @@ class AmazingRaceBot:
             # For single answer, check exact match or if expected answer is in user answer
             return expected_answer == user_answer or expected_answer in user_answer
     
+    def get_expected_answer_format(self, challenge: dict) -> str:
+        """Get the expected answer format for a challenge.
+        
+        Args:
+            challenge: Challenge configuration
+            
+        Returns:
+            'photo' or 'text' based on verification method
+        """
+        verification = challenge.get('verification', {})
+        method = verification.get('method', 'photo')  # Default to 'photo' for backward compatibility
+        
+        if method == 'photo':
+            return 'photo'
+        elif method == 'answer':
+            return 'text'
+        else:
+            # Log warning for unknown verification methods
+            logger.warning(f"Unknown verification method '{method}' for challenge. Defaulting to 'unknown'.")
+            return 'unknown'
+    
+    def get_format_mismatch_message(self, expected_format: str, challenge: dict) -> str:
+        """Get an appropriate error message when answer format doesn't match.
+        
+        Args:
+            expected_format: The expected format ('photo' or 'text')
+            challenge: Challenge configuration
+            
+        Returns:
+            Error message string
+        """
+        challenge_name = challenge.get('name', 'this challenge')
+        
+        if expected_format == 'photo':
+            return (
+                f"📷 *Photo Required*\n\n"
+                f"A photo submission is required for *{challenge_name}*.\n\n"
+                f"Please upload a photo as your answer instead of sending text.\n\n"
+                f"Use `/submit` then send your photo."
+            )
+        elif expected_format == 'text':
+            return (
+                f"📝 *Text Answer Required*\n\n"
+                f"A text answer is required for *{challenge_name}*.\n\n"
+                f"Please send your answer as text instead of uploading a photo.\n\n"
+                f"Use `/submit <your answer>` or `/submit` and then type your answer."
+            )
+        else:
+            return (
+                f"⚠️ *Invalid Submission Format*\n\n"
+                f"The format you submitted doesn't match what's expected for *{challenge_name}*.\n\n"
+                f"Please check the challenge instructions and try again."
+            )
+    
     def get_challenge_instructions(self, challenge: dict) -> str:
         """Get submission instructions based on challenge type.
         
@@ -1598,8 +1652,14 @@ class AmazingRaceBot:
             
             await self._handle_photo_submission(update, context)
             return
+        elif verification.get('method') == 'answer':
+            # Photo sent but current challenge expects a text answer
+            expected_format = self.get_expected_answer_format(current_challenge)
+            error_message = self.get_format_mismatch_message(expected_format, current_challenge)
+            await update.message.reply_text(error_message, parse_mode='Markdown')
+            return
         
-        # Photo sent but current challenge doesn't require a photo
+        # Photo sent but current challenge doesn't require a photo and isn't an answer challenge
         # Ignore it silently (user might be sending unrelated photos)
     
     async def _handle_photo_submission(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2089,6 +2149,21 @@ class AmazingRaceBot:
             
             if team_name:
                 # User is in a team during an active game
+                # First, check what format the current challenge expects
+                team = self.game_state.teams[team_name]
+                current_challenge_index = team.get('current_challenge_index', 0)
+                
+                # Check if all challenges are completed
+                if current_challenge_index < len(self.challenges):
+                    current_challenge = self.challenges[current_challenge_index]
+                    expected_format = self.get_expected_answer_format(current_challenge)
+                    
+                    if expected_format == 'photo':
+                        # Text sent but photo is expected
+                        error_message = self.get_format_mismatch_message(expected_format, current_challenge)
+                        await update.message.reply_text(error_message, parse_mode='Markdown')
+                        return
+                
                 # Treat this message as a submission
                 # Note: We set context.args to simulate the /submit command being called with the message as the answer
                 user_input = update.message.text.strip()
