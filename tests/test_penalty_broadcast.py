@@ -4,6 +4,7 @@ Unit tests for penalty notification broadcast functionality.
 import unittest
 import os
 import yaml
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch, call
 from bot import AmazingRaceBot
 
@@ -316,7 +317,6 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         bot.game_state.approve_photo_submission(submission_id, len(bot.challenges))
         
         # Get the unlock time for the next challenge
-        from datetime import datetime
         unlock_time_str = bot.game_state.get_challenge_unlock_time("Team A", 2)
         self.assertIsNotNone(unlock_time_str, "Unlock time should be set after photo approval")
         unlock_time = datetime.fromisoformat(unlock_time_str)

@@ -424,7 +424,7 @@ class AmazingRaceBot:
                     f"Before the next challenge is revealed, send a photo of your team at the challenge location.\n"
                 )
                 if penalty_info:
-                    broadcast_message += f"⏱️ Note: The penalty timer will only start after your photo is approved."
+                    broadcast_message += f"⏱️ Note: The penalty timer will only start after your photo is approved.\n"
         
         # Broadcast to all team members
         sent_to_users = set()
