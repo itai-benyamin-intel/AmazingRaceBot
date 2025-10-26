@@ -124,7 +124,15 @@ class GameState:
         self.teams[team_name]['current_challenge_index'] += 1
         
         # Record completion time for penalty tracking
-        self.set_challenge_completion_time(team_name, challenge_id)
+        # When photo verification is enabled and this is not the last challenge,
+        # defer setting completion time until photo verification for next challenge is approved
+        next_challenge_id = challenge_id + 1
+        should_defer = (self.photo_verification_enabled and 
+                       next_challenge_id <= total_challenges)
+        
+        if not should_defer:
+            # No photo verification OR last challenge - set completion time immediately
+            self.set_challenge_completion_time(team_name, challenge_id)
         
         # Store submission data if provided
         if submission_data:
@@ -354,6 +362,17 @@ class GameState:
             'timestamp': verification['timestamp'],
             'approved_at': datetime.now().isoformat()
         }
+        
+        # When photo verification is approved, set the completion time for the previous challenge
+        # This ensures penalty timeout starts only after photo verification is complete
+        previous_challenge_id = challenge_id - 1
+        if previous_challenge_id >= 1:
+            # Check if previous challenge was completed but completion time was not set
+            if previous_challenge_id in self.teams[team_name]['completed_challenges']:
+                completion_times = self.teams[team_name].get('challenge_completion_times', {})
+                if str(previous_challenge_id) not in completion_times:
+                    # Set completion time now (penalty timer starts from here)
+                    self.set_challenge_completion_time(team_name, previous_challenge_id)
         
         # Mark verification as approved
         self.pending_photo_verifications[verification_id]['status'] = 'approved'
