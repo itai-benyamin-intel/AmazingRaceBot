@@ -28,7 +28,9 @@ The bot supports various challenge types with different verification methods:
    - Verification: Text answer (auto-checked)
    
 3. **💻 Code Challenge**: Teams write or debug code
-   - Verification: Text submission with keyword matching
+   - Verification: Text submission with flexible answer matching
+   - Supports multiple acceptable answers (e.g., different output formats)
+   - Can use simple keyword matching for function names
    
 4. **📱 QR Hunt Challenge**: Teams find and scan QR codes
    - Verification: Text answer from QR code
@@ -52,6 +54,7 @@ The bot supports various challenge types with different verification methods:
   - Supports exact match or keyword matching
   - Case-insensitive comparison
   - For trivia: supports multiple required keywords (comma-separated)
+  - For code challenges: supports multiple acceptable answers (any one matches)
   - **Checklist Mode**: Allows progressive submission of list items
     - Teams can submit items one at a time or all at once
     - Progress is tracked for each individual item
@@ -335,6 +338,23 @@ game:
         - "It's used for typing"
     
     - id: 3
+      name: "Code Challenge"
+      description: |
+        Debug this function and submit the output for fib(5):
+        def fib(n):
+            if n <= 1: return 1  # Bug here!
+            return fib(n-1) + fib(n-2)
+      location: "Computer Lab"
+      type: "code"
+      verification:
+        method: "answer"
+        # Multiple acceptable answer formats for flexibility
+        acceptable_answers:
+          - "5"
+          - "five"
+          - "answer is 5"
+    
+    - id: 4
       name: "Trivia Challenge"
       description: "Name three programming languages"
       location: "Anywhere"
@@ -344,7 +364,7 @@ game:
         answer: "python, java, javascript"  # Comma-separated for multiple keywords
       # No hints - this challenge is optional without hints
     
-    - id: 4
+    - id: 5
       name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
@@ -371,7 +391,8 @@ game:
 - **type**: Challenge type (photo, riddle, code, qr, trivia, scavenger, team_activity, decryption, text)
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
-  - **answer**: (for answer method) Expected answer or comma-separated keywords
+  - **answer**: (for answer method) Expected answer or comma-separated keywords (for trivia)
+  - **acceptable_answers**: (for answer method) List of acceptable answers - any one matches (for code challenges)
   - **checklist_items**: (for answer method) List of items that can be submitted individually
     - Enables progressive answering - teams can submit items one at a time
     - Each item is tracked independently

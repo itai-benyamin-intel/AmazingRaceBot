@@ -89,11 +89,13 @@ class AmazingRaceBot:
         if verification.get('method') != 'answer':
             return {'correct': False, 'partial': False, 'matched_items': []}
         
+        # Normalize user answer once at the beginning
+        user_answer = user_answer.lower().strip()
+        
         # Check if this is a checklist challenge
         checklist_items = verification.get('checklist_items')
         if checklist_items:
             # Checklist mode
-            user_answer = user_answer.lower().strip()
             matched_items = []
             
             for item in checklist_items:
@@ -128,9 +130,28 @@ class AmazingRaceBot:
                     'matched_items': []
                 }
         
-        # Non-checklist mode (existing logic)
+        # Non-checklist mode
+        # Check if there's a list of acceptable answers (for code challenges and alternatives)
+        acceptable_answers = verification.get('acceptable_answers')
+        if acceptable_answers:
+            # For code challenges: accept any one of the acceptable answers
+            for acceptable in acceptable_answers:
+                acceptable_lower = acceptable.lower().strip()
+                if acceptable_lower == user_answer or acceptable_lower in user_answer:
+                    return {
+                        'correct': True,
+                        'partial': False,
+                        'matched_items': []
+                    }
+            # None matched
+            return {
+                'correct': False,
+                'partial': False,
+                'matched_items': []
+            }
+        
+        # Standard answer verification
         expected_answer = verification.get('answer', '').lower().strip()
-        user_answer = user_answer.lower().strip()
         
         # Check if the expected answer is a comma-separated list (for trivia)
         if ',' in expected_answer:

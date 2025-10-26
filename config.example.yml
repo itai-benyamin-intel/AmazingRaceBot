@@ -59,12 +59,26 @@ game:
       
     - id: 3
       name: "Code Debug"
-      description: "Fix this function to correctly calculate Fibonacci numbers. Submit the corrected function."
+      description: |
+        Fix this Python function to correctly calculate Fibonacci numbers:
+        
+        def fib(n):
+            if n <= 1:
+                return 1  # Bug: should return n
+            return fib(n-1) + fib(n-2)
+        
+        What should fib(5) return? Submit the correct result.
       location: "Lab A"
       type: "code"
       verification:
         method: "answer"
-        answer: "fibonacci"  # Keyword to check in submission
+        # For code challenges, use acceptable_answers to provide multiple valid formats
+        acceptable_answers:
+          - "5"           # Just the number
+          - "five"        # Written out
+          - "answer is 5" # In a sentence
+        # Alternative: use a single answer keyword that must appear
+        # answer: "fibonacci"
       
     - id: 4
       name: "QR Hunt"

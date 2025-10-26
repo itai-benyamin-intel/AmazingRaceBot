@@ -10,7 +10,12 @@ from game_state import GameState
 
 
 class MockBot:
-    """Mock bot for testing challenge type methods."""
+    """Mock bot for testing challenge type methods.
+    
+    Note: This mock intentionally duplicates the verification logic from bot.py
+    to ensure tests remain isolated and don't depend on the full bot implementation.
+    The logic should be kept in sync with bot.py's verify_answer method.
+    """
     
     def __init__(self, challenges):
         self.challenges = challenges
@@ -37,8 +42,20 @@ class MockBot:
         if verification.get('method') != 'answer':
             return False
         
-        expected_answer = verification.get('answer', '').lower().strip()
         user_answer = user_answer.lower().strip()
+        
+        # Check if there's a list of acceptable answers (for code challenges and alternatives)
+        acceptable_answers = verification.get('acceptable_answers')
+        if acceptable_answers:
+            # For code challenges: accept any one of the acceptable answers
+            for acceptable in acceptable_answers:
+                acceptable_lower = acceptable.lower().strip()
+                if acceptable_lower == user_answer or acceptable_lower in user_answer:
+                    return True
+            # None matched
+            return False
+        
+        expected_answer = verification.get('answer', '').lower().strip()
         
         # Check if the expected answer is a comma-separated list (for trivia)
         if ',' in expected_answer:
@@ -307,6 +324,79 @@ class TestChallengeTypes(unittest.TestCase):
         
         self.assertIn('challenge_submissions', team)
         self.assertEqual(team['challenge_submissions']['1']['photo_id'], 'test_photo_123')
+    
+    def test_code_challenge_acceptable_answers(self):
+        """Test code challenge with multiple acceptable answers."""
+        challenge = {
+            'type': 'code',
+            'verification': {
+                'method': 'answer',
+                'acceptable_answers': ['5', 'five', 'answer is 5']
+            }
+        }
+        
+        # All acceptable answers should pass
+        self.assertTrue(self.bot.verify_answer(challenge, '5'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'five'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'answer is 5'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'The answer is 5'))
+        
+        # Wrong answers should fail
+        self.assertFalse(self.bot.verify_answer(challenge, '3'))
+        self.assertFalse(self.bot.verify_answer(challenge, 'seven'))
+    
+    def test_code_challenge_acceptable_answers_case_insensitive(self):
+        """Test that acceptable answers are case-insensitive."""
+        challenge = {
+            'type': 'code',
+            'verification': {
+                'method': 'answer',
+                'acceptable_answers': ['fibonacci', 'Fibonacci sequence']
+            }
+        }
+        
+        # Case variations should work
+        self.assertTrue(self.bot.verify_answer(challenge, 'fibonacci'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'FIBONACCI'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'Fibonacci'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'The fibonacci sequence'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'fibonacci SEQUENCE'))
+    
+    def test_code_challenge_exact_match_vs_partial(self):
+        """Test exact match and partial match for code challenges."""
+        challenge = {
+            'type': 'code',
+            'verification': {
+                'method': 'answer',
+                'acceptable_answers': ['42', 'def fibonacci']
+            }
+        }
+        
+        # Exact matches
+        self.assertTrue(self.bot.verify_answer(challenge, '42'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'def fibonacci'))
+        
+        # Partial matches (answer contains acceptable answer)
+        self.assertTrue(self.bot.verify_answer(challenge, 'The answer is 42'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'def fibonacci(n):'))
+        
+        # No match
+        self.assertFalse(self.bot.verify_answer(challenge, '43'))
+    
+    def test_code_challenge_backward_compatibility(self):
+        """Test that old code challenges with 'answer' still work."""
+        challenge = {
+            'type': 'code',
+            'verification': {
+                'method': 'answer',
+                'answer': 'fibonacci'
+            }
+        }
+        
+        # Should still work with keyword matching
+        self.assertTrue(self.bot.verify_answer(challenge, 'fibonacci'))
+        self.assertTrue(self.bot.verify_answer(challenge, 'The fibonacci function'))
+        self.assertFalse(self.bot.verify_answer(challenge, 'factorial'))
 
 
 if __name__ == '__main__':
