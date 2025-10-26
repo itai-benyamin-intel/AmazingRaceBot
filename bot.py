@@ -71,20 +71,64 @@ class AmazingRaceBot:
         }
         return type_emojis.get(challenge_type, '🎯')
     
-    def verify_answer(self, challenge: dict, user_answer: str) -> bool:
+    def verify_answer(self, challenge: dict, user_answer: str, team_name: str = None) -> dict:
         """Verify a text answer for a challenge.
         
         Args:
             challenge: Challenge configuration
             user_answer: User's submitted answer
+            team_name: Name of the team (needed for checklist verification)
             
         Returns:
-            True if answer is correct, False otherwise
+            Dictionary with:
+            - 'correct': bool - True if answer is fully correct
+            - 'partial': bool - True if answer is partially correct (for checklist)
+            - 'matched_items': list - List of matched checklist items (for checklist)
         """
         verification = challenge.get('verification', {})
         if verification.get('method') != 'answer':
-            return False
+            return {'correct': False, 'partial': False, 'matched_items': []}
         
+        # Check if this is a checklist challenge
+        checklist_items = verification.get('checklist_items')
+        if checklist_items:
+            # Checklist mode
+            user_answer = user_answer.lower().strip()
+            matched_items = []
+            
+            for item in checklist_items:
+                item_lower = item.lower().strip()
+                # Check if the user's answer matches this item
+                if item_lower == user_answer or item_lower in user_answer:
+                    matched_items.append(item)
+            
+            if matched_items and team_name:
+                # Check if all items are now completed
+                challenge_id = challenge['id']
+                for item in matched_items:
+                    self.game_state.update_checklist_item(team_name, challenge_id, item)
+                
+                all_complete = self.game_state.is_checklist_complete(team_name, challenge_id, checklist_items)
+                return {
+                    'correct': all_complete,
+                    'partial': len(matched_items) > 0 and not all_complete,
+                    'matched_items': matched_items
+                }
+            elif matched_items:
+                # Team name not provided, but items matched
+                return {
+                    'correct': False,
+                    'partial': True,
+                    'matched_items': matched_items
+                }
+            else:
+                return {
+                    'correct': False,
+                    'partial': False,
+                    'matched_items': []
+                }
+        
+        # Non-checklist mode (existing logic)
         expected_answer = verification.get('answer', '').lower().strip()
         user_answer = user_answer.lower().strip()
         
@@ -92,10 +136,16 @@ class AmazingRaceBot:
         if ',' in expected_answer:
             # For trivia with multiple answers, check if user answer contains all required keywords
             required_keywords = [kw.strip() for kw in expected_answer.split(',')]
-            return all(keyword in user_answer for keyword in required_keywords)
+            is_correct = all(keyword in user_answer for keyword in required_keywords)
         else:
             # For single answer, check exact match or if expected answer is in user answer
-            return expected_answer == user_answer or expected_answer in user_answer
+            is_correct = expected_answer == user_answer or expected_answer in user_answer
+        
+        return {
+            'correct': is_correct,
+            'partial': False,
+            'matched_items': []
+        }
     
     def get_expected_answer_format(self, challenge: dict) -> str:
         """Get the expected answer format for a challenge.
@@ -757,8 +807,18 @@ class AmazingRaceBot:
                 else:
                     message += (
                         f"🎯 *{challenge['name']}* (CURRENT)\n"
-                        f"   {challenge['description']}\n\n"
+                        f"   {challenge['description']}\n"
                     )
+                    
+                    # Show checklist progress if applicable
+                    verification = challenge.get('verification', {})
+                    checklist_items = verification.get('checklist_items')
+                    if checklist_items and team_name:
+                        progress = self.game_state.get_checklist_progress(team_name, challenge['id'])
+                        completed_count = sum(1 for item in checklist_items if progress.get(item, False))
+                        message += f"   📝 Checklist: {completed_count}/{len(checklist_items)} items completed\n"
+                    
+                    message += "\n"
             # Locked challenges are not shown anymore
         
         if penalty_info:
@@ -870,6 +930,24 @@ class AmazingRaceBot:
                 f"📝 {challenge['description']}\n\n"
                 f"ℹ️ {instructions}\n\n"
             )
+            
+            # Check if this is a checklist challenge
+            verification = challenge.get('verification', {})
+            checklist_items = verification.get('checklist_items')
+            if checklist_items:
+                # Show checklist progress
+                progress = self.game_state.get_checklist_progress(team_name, challenge_id)
+                message += "📝 *Checklist Items:*\n"
+                completed_count = 0
+                for item in checklist_items:
+                    if progress.get(item, False):
+                        message += f"✅ {item}\n"
+                        completed_count += 1
+                    else:
+                        message += f"⬜ {item}\n"
+                
+                message += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed\n"
+                message += "💡 *Tip:* Submit each item individually or all at once!\n\n"
             
             # Add hints information
             hints = challenge.get('hints', [])
@@ -1171,14 +1249,23 @@ class AmazingRaceBot:
             
             user_answer = ' '.join(context.args)
             
-            if self.verify_answer(challenge, user_answer):
-                # Answer is correct
+            # Check if this is a checklist challenge
+            verification = challenge.get('verification', {})
+            is_checklist = 'checklist_items' in verification
+            
+            result = self.verify_answer(challenge, user_answer, team_name)
+            
+            if result['correct']:
+                # Answer is correct (or all checklist items completed)
                 submission_data = {
                     'type': 'answer',
                     'answer': user_answer,
                     'timestamp': datetime.now().isoformat(),
                     'submitted_by': user.id
                 }
+                
+                if is_checklist:
+                    submission_data['checklist_completed'] = True
                 
                 if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges), submission_data):
                     team = self.game_state.teams[team_name]
@@ -1244,11 +1331,52 @@ class AmazingRaceBot:
                             await self.broadcast_current_challenge(context, team_name, user.id)
                 else:
                     await update.message.reply_text("Error completing challenge. Please try again.")
+            elif result['partial']:
+                # Partial match for checklist items
+                checklist_items = verification.get('checklist_items', [])
+                progress = self.game_state.get_checklist_progress(team_name, challenge_id)
+                
+                # Build progress display
+                progress_text = "📝 *Checklist Progress*\n\n"
+                completed_count = 0
+                for item in checklist_items:
+                    if progress.get(item, False):
+                        progress_text += f"✅ {item}\n"
+                        completed_count += 1
+                    else:
+                        progress_text += f"⬜ {item}\n"
+                
+                progress_text += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed\n\n"
+                
+                if result['matched_items']:
+                    progress_text += f"✅ Added: {', '.join(result['matched_items'])}\n\n"
+                
+                progress_text += "Keep submitting answers to complete remaining items!"
+                
+                await update.message.reply_text(progress_text, parse_mode='Markdown')
             else:
-                await update.message.reply_text(
-                    "❌ Incorrect answer. Please try again!\n"
-                    f"Hint: Make sure your answer matches what's being asked."
-                )
+                # No match
+                if is_checklist:
+                    # Show checklist progress
+                    checklist_items = verification.get('checklist_items', [])
+                    progress = self.game_state.get_checklist_progress(team_name, challenge_id)
+                    
+                    progress_text = "❌ No match found.\n\n📝 *Checklist Progress*\n\n"
+                    completed_count = 0
+                    for item in checklist_items:
+                        if progress.get(item, False):
+                            progress_text += f"✅ {item}\n"
+                            completed_count += 1
+                        else:
+                            progress_text += f"⬜ {item}\n"
+                    
+                    progress_text += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed"
+                    await update.message.reply_text(progress_text, parse_mode='Markdown')
+                else:
+                    await update.message.reply_text(
+                        "❌ Incorrect answer. Please try again!\n"
+                        f"Hint: Make sure your answer matches what's being asked."
+                    )
         
         elif method == 'photo':
             # Photo verification - wait for photo

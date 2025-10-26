@@ -52,6 +52,11 @@ The bot supports various challenge types with different verification methods:
   - Supports exact match or keyword matching
   - Case-insensitive comparison
   - For trivia: supports multiple required keywords (comma-separated)
+  - **Checklist Mode**: Allows progressive submission of list items
+    - Teams can submit items one at a time or all at once
+    - Progress is tracked for each individual item
+    - Challenge completes when all checklist items are submitted
+    - Perfect for challenges like "name 5 capitals" or "list 3 programming languages"
 
 ## Game Structure
 
@@ -338,6 +343,23 @@ game:
         method: "answer"
         answer: "python, java, javascript"  # Comma-separated for multiple keywords
       # No hints - this challenge is optional without hints
+    
+    - id: 4
+      name: "Capital Cities Checklist"
+      description: "Name 5 capital cities from different continents"
+      location: "Anywhere"
+      type: "trivia"
+      verification:
+        method: "answer"
+        # Checklist mode: participants can submit items one at a time or all at once
+        checklist_items:
+          - "Tokyo"
+          - "Paris"
+          - "Cairo"
+          - "Brasilia"
+          - "Canberra"
+      hints:
+        - "Think about each continent: Asia, Europe, Africa, South America, Australia"
 ```
 
 ### Challenge Configuration Fields
@@ -350,12 +372,52 @@ game:
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
   - **answer**: (for answer method) Expected answer or comma-separated keywords
+  - **checklist_items**: (for answer method) List of items that can be submitted individually
+    - Enables progressive answering - teams can submit items one at a time
+    - Each item is tracked independently
+    - Challenge completes when all items are submitted
+    - Items are matched case-insensitively using substring matching
 - **hints**: (optional) List of up to 3 hints for the challenge
   - Each hint costs 2 minutes penalty (max 6 minutes total)
   - Hints are revealed sequentially (one at a time)
   - Teams can request hints using `/hint`
 
 **Note**: Challenges are completed sequentially based on their ID order (1, 2, 3, etc.)
+
+### Checklist Challenges
+
+Checklist challenges allow teams to submit answers progressively instead of all at once. This is perfect for:
+- Multi-part questions (e.g., "Name 5 capital cities")
+- Collection tasks (e.g., "List 3 programming languages")
+- Enumeration challenges (e.g., "Name the 7 continents")
+
+**How it works:**
+1. Configure a challenge with `checklist_items` instead of `answer`
+2. Teams can submit answers one at a time: `/submit Tokyo`
+3. Bot tracks progress and shows which items are completed
+4. Teams can also submit multiple items: `/submit Tokyo Paris` or `/submit Tokyo and Paris`
+5. Challenge completes when all items are submitted
+
+**Example:**
+```yaml
+- id: 5
+  name: "Programming Languages"
+  description: "Name 3 popular programming languages"
+  location: "Anywhere"
+  type: "trivia"
+  verification:
+    method: "answer"
+    checklist_items:
+      - "Python"
+      - "JavaScript"
+      - "Java"
+```
+
+**Benefits:**
+- Teams can make progress even if they don't know all answers
+- Encourages teamwork as members can contribute different items
+- Progress is visible, showing which items remain
+- More engaging and interactive than all-or-nothing answers
 
 ## File Structure
 
