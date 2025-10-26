@@ -297,6 +297,7 @@ class TestChecklistFeature(unittest.IsolatedAsyncioTestCase):
         """Test that regular (non-checklist) challenges still work correctly."""
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
+        bot.game_state.set_photo_verification(False)  # Disable photo verification for this test
         bot.game_state.create_team("Team A", 111111, "Alice")
         
         # Complete first challenge (checklist)

@@ -15,6 +15,9 @@ class TestHintsFeature(unittest.TestCase):
         self.test_state_file = "test_hints_game_state.json"
         self.game_state = GameState(self.test_state_file)
         
+        # Disable photo verification for these tests (to test hints in isolation)
+        self.game_state.set_photo_verification(False)
+        
         # Create a test team
         self.game_state.create_team("Test Team", 12345, "Alice")
         self.game_state.join_team("Test Team", 67890, "Bob")

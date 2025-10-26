@@ -16,6 +16,9 @@ class TestTimeoutDisplay(unittest.TestCase):
         self.test_state_file = "test_timeout_display_state.json"
         self.game_state = GameState(self.test_state_file)
         
+        # Disable photo verification for timeout tests (to test timeout in isolation)
+        self.game_state.set_photo_verification(False)
+        
         # Create a test team
         self.game_state.create_team("Test Team", 12345, "Alice")
         self.game_state.start_game()

@@ -16,7 +16,7 @@ class GameState:
         self.challenges: Dict[int, Dict] = {}
         self.game_started: bool = False
         self.game_ended: bool = False
-        self.photo_verification_enabled: bool = False
+        self.photo_verification_enabled: bool = True
         self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
         self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
         self.pending_photo_verifications: Dict[str, Dict] = {}  # Track pending photo verifications for location
@@ -32,7 +32,7 @@ class GameState:
                     self.challenges = data.get('challenges', {})
                     self.game_started = data.get('game_started', False)
                     self.game_ended = data.get('game_ended', False)
-                    self.photo_verification_enabled = data.get('photo_verification_enabled', False)
+                    self.photo_verification_enabled = data.get('photo_verification_enabled', True)
                     self.hint_usage = data.get('hint_usage', {})
                     self.pending_photo_submissions = data.get('pending_photo_submissions', {})
                     self.pending_photo_verifications = data.get('pending_photo_verifications', {})
@@ -190,7 +190,7 @@ class GameState:
         self.challenges = {}
         self.game_started = False
         self.game_ended = False
-        self.photo_verification_enabled = False
+        self.photo_verification_enabled = True
         self.hint_usage = {}
         self.pending_photo_submissions = {}
         self.pending_photo_verifications = {}

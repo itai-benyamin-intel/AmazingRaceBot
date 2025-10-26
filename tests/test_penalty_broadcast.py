@@ -69,6 +69,9 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
         
+        # Disable photo verification for this test
+        bot.game_state.set_photo_verification(False)
+        
         # Create team with multiple members
         bot.game_state.create_team("Team A", 111111, "Alice")
         bot.game_state.join_team("Team A", 222222, "Bob")
@@ -290,6 +293,9 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
+        
+        # Disable photo verification for this test (testing challenge photo submissions, not location verification)
+        bot.game_state.set_photo_verification(False)
         
         # Create team with multiple members
         bot.game_state.create_team("Team A", 111111, "Alice")
