@@ -121,6 +121,9 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
         
+        # Disable photo verification for this test
+        bot.game_state.set_photo_verification(False)
+        
         # Create team and user
         bot.game_state.create_team("Team A", 111111, "Alice")
         
@@ -177,6 +180,9 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
         
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
+        
+        # Disable photo verification for this test
+        bot.game_state.set_photo_verification(False)
         
         # Create team and complete previous challenges
         bot.game_state.create_team("Team A", 111111, "Alice")

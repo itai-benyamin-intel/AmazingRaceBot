@@ -60,17 +60,17 @@ class TestPhotoVerification(unittest.TestCase):
         """Test that photo verification state is saved and loaded."""
         game_state = GameState(self.test_state_file)
         
-        # Initially should be False
-        self.assertFalse(game_state.photo_verification_enabled)
+        # Initially should be True (default)
+        self.assertTrue(game_state.photo_verification_enabled)
         
         # Toggle it
         result = game_state.toggle_photo_verification()
-        self.assertTrue(result)
-        self.assertTrue(game_state.photo_verification_enabled)
+        self.assertFalse(result)
+        self.assertFalse(game_state.photo_verification_enabled)
         
         # Create new instance and verify it's loaded correctly
         new_game_state = GameState(self.test_state_file)
-        self.assertTrue(new_game_state.photo_verification_enabled)
+        self.assertFalse(new_game_state.photo_verification_enabled)
     
     def test_set_photo_verification(self):
         """Test setting photo verification state."""
@@ -85,16 +85,16 @@ class TestPhotoVerification(unittest.TestCase):
         self.assertFalse(game_state.photo_verification_enabled)
     
     def test_reset_game_clears_photo_verification(self):
-        """Test that reset clears photo verification state."""
+        """Test that reset resets photo verification state to default (True)."""
         game_state = GameState(self.test_state_file)
         
-        # Enable photo verification
-        game_state.set_photo_verification(True)
-        self.assertTrue(game_state.photo_verification_enabled)
-        
-        # Reset game
-        game_state.reset_game()
+        # Disable photo verification
+        game_state.set_photo_verification(False)
         self.assertFalse(game_state.photo_verification_enabled)
+        
+        # Reset game - should restore to default (True)
+        game_state.reset_game()
+        self.assertTrue(game_state.photo_verification_enabled)
     
     def test_add_pending_photo_verification(self):
         """Test adding pending photo verification."""
@@ -373,8 +373,11 @@ class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
         bot = AmazingRaceBot(self.test_config_file)
         bot.game_state.start_game()
         
-        # Photo verification should be disabled by default
-        self.assertFalse(bot.game_state.photo_verification_enabled)
+        # Photo verification should be enabled by default
+        self.assertTrue(bot.game_state.photo_verification_enabled)
+        
+        # Disable it for this test
+        bot.game_state.set_photo_verification(False)
         
         # Create team and complete first challenge
         bot.game_state.create_team("Team A", 111111, "Alice")
@@ -454,18 +457,18 @@ class TestPhotoVerificationCommands(unittest.IsolatedAsyncioTestCase):
         update.message.reply_text = AsyncMock()
         context = MagicMock()
         
-        # Initial state should be False
-        self.assertFalse(bot.game_state.photo_verification_enabled)
-        
-        # Toggle to True
-        await bot.togglephotoverify_command(update, context)
+        # Initial state should be True (default)
         self.assertTrue(bot.game_state.photo_verification_enabled)
+        
+        # Toggle to False
+        await bot.togglephotoverify_command(update, context)
+        self.assertFalse(bot.game_state.photo_verification_enabled)
         
         # Verify message was sent
         update.message.reply_text.assert_called_once()
         call_args = update.message.reply_text.call_args
         message = call_args[0][0]
-        self.assertIn("enabled", message)
+        self.assertIn("disabled", message)
     
     async def test_togglephotoverify_command_non_admin(self):
         """Test togglephotoverify command by non-admin (should be rejected)."""
@@ -490,8 +493,8 @@ class TestPhotoVerificationCommands(unittest.IsolatedAsyncioTestCase):
         message = call_args[0][0]
         self.assertIn("Only admins", message)
         
-        # State should not have changed
-        self.assertFalse(bot.game_state.photo_verification_enabled)
+        # State should not have changed from default (True)
+        self.assertTrue(bot.game_state.photo_verification_enabled)
 
 
 if __name__ == '__main__':
