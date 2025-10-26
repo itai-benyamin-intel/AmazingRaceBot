@@ -107,13 +107,15 @@ class AmazingRaceBot:
             'photo' or 'text' based on verification method
         """
         verification = challenge.get('verification', {})
-        method = verification.get('method', 'photo')
+        method = verification.get('method', 'photo')  # Default to 'photo' for backward compatibility
         
         if method == 'photo':
             return 'photo'
         elif method == 'answer':
             return 'text'
         else:
+            # Log warning for unknown verification methods
+            logger.warning(f"Unknown verification method '{method}' for challenge. Defaulting to 'unknown'.")
             return 'unknown'
     
     def get_format_mismatch_message(self, expected_format: str, challenge: dict) -> str:

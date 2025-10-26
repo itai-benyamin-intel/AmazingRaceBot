@@ -115,7 +115,8 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         # Create team and complete first challenge to get to photo challenge
         bot.game_state.create_team("Team A", 111111, "Alice")
-        bot.game_state.complete_challenge("Team A", 1, 3, {'type': 'answer', 'answer': 'keyboard'})
+        total_challenges = len(self.config['game']['challenges'])
+        bot.game_state.complete_challenge("Team A", 1, total_challenges, {'type': 'answer', 'answer': 'keyboard'})
         
         # Mock the update and context for text message
         update = MagicMock()
@@ -152,7 +153,8 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         # Create team and complete first challenge to get to photo challenge
         bot.game_state.create_team("Team A", 111111, "Alice")
-        bot.game_state.complete_challenge("Team A", 1, 3, {'type': 'answer', 'answer': 'keyboard'})
+        total_challenges = len(self.config['game']['challenges'])
+        bot.game_state.complete_challenge("Team A", 1, total_challenges, {'type': 'answer', 'answer': 'keyboard'})
         
         # Mock the update and context for photo message
         update = MagicMock()
