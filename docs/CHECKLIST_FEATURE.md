@@ -163,9 +163,9 @@ Use /current to see full details of your current challenge.
 
 ### Matching Algorithm
 
-- Items are matched case-insensitively
-- Partial matches work (e.g., "The capital is Tokyo" matches "Tokyo")
-- Items can appear anywhere in the submitted text
+- Items are matched case-insensitively using substring matching
+- Items are found when they appear anywhere in the submitted text (e.g., "The capital is Tokyo" matches "Tokyo")
+- Each item is matched independently - submitting "Tokyo and Paris" can match both items
 - Each item is tracked independently in the team's state
 
 ### State Management
@@ -185,7 +185,7 @@ Use /current to see full details of your current challenge.
 
 - Checklist items must be configured in advance
 - Items cannot be added/removed during an active game
-- All items must be submitted to complete the challenge (no partial credit)
+- The challenge only completes when all items are submitted (teams get progress tracking, but no partial completion)
 - Checklist mode only works with `answer` verification method (not photos)
 
 ## Tips for Game Organizers

@@ -376,7 +376,7 @@ game:
     - Enables progressive answering - teams can submit items one at a time
     - Each item is tracked independently
     - Challenge completes when all items are submitted
-    - Items are matched case-insensitively
+    - Items are matched case-insensitively using substring matching
 - **hints**: (optional) List of up to 3 hints for the challenge
   - Each hint costs 2 minutes penalty (max 6 minutes total)
   - Hints are revealed sequentially (one at a time)
@@ -395,7 +395,7 @@ Checklist challenges allow teams to submit answers progressively instead of all 
 1. Configure a challenge with `checklist_items` instead of `answer`
 2. Teams can submit answers one at a time: `/submit Tokyo`
 3. Bot tracks progress and shows which items are completed
-4. Teams can also submit multiple items at once: `/submit Paris and Cairo`
+4. Teams can also submit multiple items: `/submit Tokyo Paris` or `/submit Tokyo and Paris`
 5. Challenge completes when all items are submitted
 
 **Example:**
