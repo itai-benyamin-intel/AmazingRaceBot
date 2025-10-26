@@ -73,29 +73,85 @@ Teams solve riddles or puzzles to determine answers or next locations.
 
 Teams write or debug code to solve a specific problem.
 
-**Configuration Example:**
+**Configuration Example (Recommended - Multiple Acceptable Answers):**
 ```yaml
 - id: 3
-  name: "Fix the Bug"
-  description: "Fix this function to correctly calculate Fibonacci numbers. Submit the keyword that appears in the correct solution."
+  name: "Fibonacci Calculator"
+  description: |
+    Fix this Python function to correctly calculate Fibonacci numbers:
+    
+    def fib(n):
+        if n <= 1:
+            return 1  # Bug: should return n
+        return fib(n-1) + fib(n-2)
+    
+    What should fib(5) return? Submit the correct result.
   location: "Computer Lab"
   type: "code"
   verification:
     method: "answer"
-    answer: "fibonacci"
+    # List multiple acceptable answer formats
+    acceptable_answers:
+      - "5"              # Just the number
+      - "five"           # Written out
+      - "answer is 5"    # In a sentence
+```
+
+**Configuration Example (Simple - Single Keyword):**
+```yaml
+- id: 3
+  name: "Code Challenge"
+  description: "Write a function called 'fibonacci' that calculates Fibonacci numbers."
+  location: "Computer Lab"
+  type: "code"
+  verification:
+    method: "answer"
+    answer: "fibonacci"  # Checks if answer contains this keyword
 ```
 
 **How it works:**
 - Teams work on the coding problem
-- Submit their answer or a keyword from their solution
-- Bot verifies the submission
+- Submit their answer using `/submit 3 <answer>`
+- Bot verifies the submission against acceptable answers or keywords
 
-**Tips:**
-- For code challenges, you can ask teams to submit:
-  - The result of running their code
-  - A specific keyword that appears in the correct solution
-  - The function name
-  - A hash of their code
+**Verification Options:**
+
+1. **Multiple Acceptable Answers** (Recommended for code challenges):
+   ```yaml
+   verification:
+     method: "answer"
+     acceptable_answers:
+       - "42"
+       - "forty-two"
+       - "result: 42"
+   ```
+   - Accepts ANY one of the listed answers
+   - Each answer can be an exact match OR contained in the submission
+   - Case-insensitive matching
+   - Best for code output verification
+
+2. **Single Keyword** (Simple approach):
+   ```yaml
+   verification:
+     method: "answer"
+     answer: "fibonacci"
+   ```
+   - Checks if the keyword appears in the answer
+   - Case-insensitive matching
+   - Good for function names or simple validation
+
+**Best Practices for Code Challenges:**
+- **Ask for outputs**, not code: "What does this function return?" is easier to verify than code itself
+- **Use acceptable_answers** for flexibility: Allow different formats (numeric, written, etc.)
+- **Provide clear examples**: Show the exact input/output expected
+- **Consider edge cases**: Include common variations in acceptable_answers
+- **Test your verification**: Try different answer formats before the event
+
+**Example Use Cases:**
+1. **Bug Fix Challenge**: Find and fix a bug, submit the corrected output
+2. **Algorithm Challenge**: Implement an algorithm, submit the result for a test case
+3. **Code Reading**: Analyze code and predict the output
+4. **Function Naming**: Write code with a specific function name (keyword verification)
 
 ---
 
