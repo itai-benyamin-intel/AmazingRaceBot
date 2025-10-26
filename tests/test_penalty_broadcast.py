@@ -18,13 +18,11 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -40,7 +38,6 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'riddle',
@@ -266,7 +263,6 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         self.config['game']['challenges'] = [
             {
                 'id': 1,
-                'name': 'Challenge 1',
                 'description': 'Photo challenge',
                 'location': 'Start',
                 'type': 'photo',
@@ -277,7 +273,6 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
             },
             {
                 'id': 2,
-                'name': 'Challenge 2',
                 'description': 'Second challenge',
                 'location': 'Library',
                 'type': 'riddle',
@@ -329,7 +324,7 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         
         # Now broadcast the completion (simulating what happens in the callback handler)
         await bot.broadcast_challenge_completion(
-            context, "Team A", 1, "Challenge 1",
+            context, "Team A", 1,
             111111, "Alice", 1, 2,
             penalty_info={
                 'hint_count': 2,

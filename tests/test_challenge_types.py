@@ -104,7 +104,6 @@ class TestChallengeTypes(unittest.TestCase):
         self.test_challenges = [
             {
                 'id': 1,
-                'name': 'Photo Challenge',
                 'description': 'Take a team photo',
                 'location': 'Park',
                 'type': 'photo',
@@ -114,7 +113,6 @@ class TestChallengeTypes(unittest.TestCase):
             },
             {
                 'id': 2,
-                'name': 'Riddle Challenge',
                 'description': 'What has keys but no locks?',
                 'location': 'Library',
                 'type': 'riddle',
@@ -125,7 +123,6 @@ class TestChallengeTypes(unittest.TestCase):
             },
             {
                 'id': 3,
-                'name': 'Trivia Challenge',
                 'description': 'Name three programming languages',
                 'location': 'Anywhere',
                 'type': 'trivia',
@@ -136,7 +133,6 @@ class TestChallengeTypes(unittest.TestCase):
             },
             {
                 'id': 4,
-                'name': 'QR Hunt',
                 'description': 'Find the QR code',
                 'location': 'Main Hall',
                 'type': 'qr',

@@ -17,13 +17,11 @@ class TestInteractiveCommands(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -34,7 +32,6 @@ class TestInteractiveCommands(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'trivia',

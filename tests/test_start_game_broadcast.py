@@ -20,13 +20,11 @@ class TestStartGameBroadcast(unittest.TestCase):
         config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge description',
                         'location': 'Starting Point',
                         'type': 'riddle',
@@ -35,7 +33,6 @@ class TestStartGameBroadcast(unittest.TestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge description',
                         'location': 'Second Location',
                         'type': 'photo',
@@ -118,7 +115,7 @@ class TestStartGameBroadcast(unittest.TestCase):
             # Verify challenge details in broadcast
             challenge_message = challenge_broadcasts[0].kwargs['text']
             self.assertIn('Challenge #1', challenge_message)
-            self.assertIn('Challenge 1', challenge_message)
+            self.assertIn('Challenge #1', challenge_message)
             self.assertIn('First challenge description', challenge_message)
         
         asyncio.run(_test())

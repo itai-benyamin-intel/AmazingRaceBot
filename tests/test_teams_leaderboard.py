@@ -18,7 +18,6 @@ class TestTeamsAndLeaderboardCommands(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [

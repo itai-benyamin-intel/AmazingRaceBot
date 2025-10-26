@@ -17,13 +17,11 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -35,7 +33,6 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'trivia',
@@ -47,7 +44,6 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Challenge 3',
                         'description': 'Third challenge with no custom message',
                         'location': 'Park',
                         'type': 'riddle',
@@ -164,7 +160,6 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
         # Add a challenge with markdown in success_message
         self.config['game']['challenges'].append({
             'id': 4,
-            'name': 'Challenge 4',
             'description': 'Fourth challenge',
             'location': 'Museum',
             'type': 'trivia',
@@ -222,13 +217,11 @@ class TestSuccessMessagePhotoChallenge(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Photo Challenge',
                         'description': 'Take a team photo',
                         'location': 'Start',
                         'type': 'photo',

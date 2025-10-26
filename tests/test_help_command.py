@@ -19,13 +19,11 @@ class TestHelpCommand(unittest.TestCase):
         config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'Test challenge',
                         'location': 'Test location',
                         'type': 'riddle',
@@ -33,7 +31,6 @@ class TestHelpCommand(unittest.TestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Test challenge 2',
                         'location': 'Test location 2',
                         'type': 'photo',
@@ -160,13 +157,11 @@ class TestUnrecognizedMessageHandler(unittest.TestCase):
         config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'Test challenge',
                         'location': 'Test location',
                         'type': 'riddle',

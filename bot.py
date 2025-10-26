@@ -199,26 +199,26 @@ class AmazingRaceBot:
         Returns:
             Error message string
         """
-        challenge_name = challenge.get('name', 'this challenge')
+        challenge_id = challenge.get('id', 'this challenge')
         
         if expected_format == 'photo':
             return (
                 f"📷 *Photo Required*\n\n"
-                f"A photo submission is required for *{challenge_name}*.\n\n"
+                f"A photo submission is required for *Challenge #{challenge_id}*.\n\n"
                 f"Please upload a photo as your answer instead of sending text.\n\n"
                 f"Use `/submit` then send your photo."
             )
         elif expected_format == 'text':
             return (
                 f"📝 *Text Answer Required*\n\n"
-                f"A text answer is required for *{challenge_name}*.\n\n"
+                f"A text answer is required for *Challenge #{challenge_id}*.\n\n"
                 f"Please send your answer as text instead of uploading a photo.\n\n"
                 f"Use `/submit <your answer>` or `/submit` and then type your answer."
             )
         else:
             return (
                 f"⚠️ *Invalid Submission Format*\n\n"
-                f"The format you submitted doesn't match what's expected for *{challenge_name}*.\n\n"
+                f"The format you submitted doesn't match what's expected for *Challenge #{challenge_id}*.\n\n"
                 f"Please check the challenge instructions and try again."
             )
     
@@ -336,7 +336,7 @@ class AmazingRaceBot:
                 # Instead, notify team that they need to send a photo
                 broadcast_message = (
                     f"📷 *Photo Verification Required*\n\n"
-                    f"*Challenge #{challenge_id}: {challenge['name']}*\n\n"
+                    f"*Challenge #{challenge_id}*\n\n"
                     f"Before you can view this challenge, send a photo of your team at the challenge location.\n\n"
                     f"📍 Location: {challenge['location']}\n\n"
                     f"*Instructions:*\n"
@@ -376,7 +376,7 @@ class AmazingRaceBot:
         # Create broadcast message
         broadcast_message = (
             f"🎯 *New Challenge Available!*\n\n"
-            f"*Challenge #{challenge_id}: {challenge['name']}*\n"
+            f"*Challenge #{challenge_id}*\n"
             f"{type_emoji} Type: {challenge_type}\n"
             f"📍 Location: {challenge['location']}\n"
             f"📝 {challenge['description']}\n\n"
@@ -444,7 +444,7 @@ class AmazingRaceBot:
     
     async def broadcast_challenge_completion(self, context: ContextTypes.DEFAULT_TYPE, 
                                             team_name: str, challenge_id: int, 
-                                            challenge_name: str, submitted_by_id: int,
+                                            submitted_by_id: int,
                                             submitted_by_name: str, completed: int, 
                                             total: int, penalty_info: Optional[dict] = None,
                                             photo_verification_needed: bool = False):
@@ -454,7 +454,6 @@ class AmazingRaceBot:
             context: Telegram context
             team_name: Name of the team
             challenge_id: ID of the completed challenge
-            challenge_name: Name of the completed challenge
             submitted_by_id: ID of user who submitted
             submitted_by_name: Name of user who submitted
             completed: Number of challenges completed
@@ -468,7 +467,7 @@ class AmazingRaceBot:
         broadcast_message = (
             f"✅ *Challenge Completed!*\n\n"
             f"Team: {team_name}\n"
-            f"Challenge #{challenge_id}: {challenge_name}\n"
+            f"Challenge #{challenge_id}\n"
             f"Submitted by: {submitted_by_name}\n"
             f"Progress: {completed}/{total} challenges"
         )
@@ -838,21 +837,21 @@ class AmazingRaceBot:
             if i < current_challenge_index:
                 # Completed challenge - show title and brief description only
                 message += (
-                    f"✅ *{challenge['name']}*\n"
+                    f"✅ *Challenge #{challenge['id']}*\n"
                     f"   {challenge['description']}\n\n"
                 )
             elif i == current_challenge_index:
                 # Current challenge - show title and brief description only
                 if penalty_info:
                     message += (
-                        f"⏱️ *{challenge['name']}* (LOCKED - Penalty Timeout)\n"
+                        f"⏱️ *Challenge #{challenge['id']}* (LOCKED - Penalty Timeout)\n"
                         f"   Challenge locked due to {penalty_info['hint_count']} hint(s) used\n"
                         f"   ⏳ Unlocks in: {penalty_info['minutes']}m {penalty_info['seconds']}s\n"
                         f"   Available at: {penalty_info['unlock_time'].strftime('%H:%M:%S')}\n\n"
                     )
                 else:
                     message += (
-                        f"🎯 *{challenge['name']}* (CURRENT)\n"
+                        f"🎯 *Challenge #{challenge['id']}* (CURRENT)\n"
                         f"   {challenge['description']}\n"
                     )
                     
@@ -910,7 +909,7 @@ class AmazingRaceBot:
                 # Photo verification not done yet
                 message = (
                     f"📷 *Photo Verification Required*\n\n"
-                    f"*Challenge #{challenge_id}: {challenge['name']}*\n\n"
+                    f"*Challenge #{challenge_id}*\n\n"
                     f"Before you can view this challenge, you need to send a photo of your team at the challenge location.\n\n"
                     f"📍 Location: {challenge['location']}\n\n"
                     f"*Instructions:*\n"
@@ -958,7 +957,7 @@ class AmazingRaceBot:
             # Show locked challenge message
             message = (
                 f"⏱️ *Challenge Locked - Penalty Timeout*\n\n"
-                f"*Next Challenge: #{challenge_id}: {challenge['name']}*\n\n"
+                f"*Next Challenge: #{challenge_id}*\n\n"
                 f"Your team used {penalty_info['hint_count']} hint(s) on the previous challenge.\n"
                 f"You must wait before this challenge is unlocked.\n\n"
                 f"⏳ Time remaining: {penalty_info['minutes']}m {penalty_info['seconds']}s\n\n"
@@ -970,7 +969,7 @@ class AmazingRaceBot:
             # Show full challenge details
             message = (
                 f"🎯 *Your Current Challenge*\n\n"
-                f"*Challenge #{challenge_id}: {challenge['name']}*\n"
+                f"*Challenge #{challenge_id}*\n"
                 f"{type_emoji} Type: {challenge_type}\n"
                 f"📍 Location: {challenge['location']}\n"
                 f"📝 {challenge['description']}\n\n"
@@ -1167,8 +1166,7 @@ class AmazingRaceBot:
         team_data = self.game_state.teams[team_name]
         broadcast_message = (
             f"💡 *Hint Revealed for Challenge #{challenge_id}*\n\n"
-            f"Requested by: {user.first_name}\n"
-            f"Challenge: {current_challenge['name']}\n\n"
+            f"Requested by: {user.first_name}\n\n"
             f"*Hint:* {hint_text}\n\n"
             f"⏱️ Penalty: {total_penalty} minutes total"
         )
@@ -1258,7 +1256,7 @@ class AmazingRaceBot:
                 # Photo verification not done yet - cannot submit answer
                 message = (
                     f"📷 *Photo Verification Required*\n\n"
-                    f"*Challenge #{challenge_id}: {challenge['name']}*\n\n"
+                    f"*Challenge #{challenge_id}*\n\n"
                     f"Before you can submit an answer to this challenge, you need to send a photo of your team at the challenge location.\n\n"
                     f"📍 Location: {challenge['location']}\n\n"
                     f"*Instructions:*\n"
@@ -1287,7 +1285,7 @@ class AmazingRaceBot:
                 context.user_data['waiting_for']['challenge_id'] = challenge_id
                 await update.message.reply_text(
                     f"Please provide your answer to the challenge:\n"
-                    f"*{challenge['name']}*\n\n"
+                    f"*Challenge #{challenge_id}*\n\n"
                     f"Type your answer below:",
                     parse_mode='Markdown'
                 )
@@ -1320,7 +1318,7 @@ class AmazingRaceBot:
                     
                     response = (
                         f"✅ Correct! Team '{team_name}' completed:\n"
-                        f"*{challenge['name']}*\n"
+                        f"*Challenge #{challenge_id}*\n"
                         f"Progress: {completed}/{total} challenges"
                     )
                     
@@ -1363,7 +1361,7 @@ class AmazingRaceBot:
                     
                     # Broadcast completion to team and admin
                     await self.broadcast_challenge_completion(
-                        context, team_name, challenge_id, challenge['name'],
+                        context, team_name, challenge_id,
                         user.id, user.first_name, completed, total,
                         penalty_info, photo_verification_needed
                     )
@@ -1432,13 +1430,12 @@ class AmazingRaceBot:
             
             context.bot_data['pending_submissions'][user.id] = {
                 'team_name': team_name,
-                'challenge_id': challenge_id,
-                'challenge_name': challenge['name']
+                'challenge_id': challenge_id
             }
             
             await update.message.reply_text(
                 f"📷 Please send a photo for:\n"
-                f"*{challenge['name']}*\n\n"
+                f"*Challenge #{challenge_id}*\n\n"
                 f"The photo will be reviewed by the admin.",
                 parse_mode='Markdown'
             )
@@ -1446,7 +1443,7 @@ class AmazingRaceBot:
         else:
             # Default: manual verification by admin
             await update.message.reply_text(
-                f"Submission recorded for *{challenge['name']}*.\n"
+                f"Submission recorded for *Challenge #{challenge_id}*.\n"
                 f"Waiting for admin verification...",
                 parse_mode='Markdown'
             )
@@ -1821,15 +1818,13 @@ class AmazingRaceBot:
                         ]
                         reply_markup = InlineKeyboardMarkup(keyboard)
                         
-                        challenge_name = current_challenge.get('name', f'Challenge #{challenge_id}')
-                        
                         await context.bot.send_photo(
                             chat_id=self.admin_id,
                             photo=photo.file_id,
                             caption=(
                                 f"📷 *Photo Verification - Location Arrival*\n"
                                 f"Team: {team_name}\n"
-                                f"Challenge #{challenge_id}: {challenge_name}\n"
+                                f"Challenge #{challenge_id}\n"
                                 f"Submitted by: {user.first_name}\n\n"
                                 f"Approve to reveal the challenge to the team.\n"
                                 f"Verification ID: `{verification_id}`"
@@ -1853,8 +1848,7 @@ class AmazingRaceBot:
             
             context.bot_data['pending_submissions'][user.id] = {
                 'team_name': team_name,
-                'challenge_id': challenge_id,
-                'challenge_name': current_challenge['name']
+                'challenge_id': challenge_id
             }
             
             await self._handle_photo_submission(update, context)
@@ -1876,7 +1870,6 @@ class AmazingRaceBot:
         pending = context.bot_data['pending_submissions'][user.id]
         team_name = pending['team_name']
         challenge_id = pending['challenge_id']
-        challenge_name = pending['challenge_name']
         
         # Get the photo
         photo = update.message.photo[-1]  # Get highest resolution
@@ -1889,7 +1882,7 @@ class AmazingRaceBot:
         # Notify the user that photo was submitted and is pending review
         response = (
             f"📷 Photo submitted for:\n"
-            f"*{challenge_name}*\n\n"
+            f"*Challenge #{challenge_id}*\n\n"
             f"Your photo has been sent to the admin for review.\n"
             f"You will be notified once it's approved."
         )
@@ -1913,7 +1906,7 @@ class AmazingRaceBot:
                     caption=(
                         f"📷 *Photo Submission - Challenge Completion*\n"
                         f"Team: {team_name}\n"
-                        f"Challenge #{challenge_id}: {challenge_name}\n"
+                        f"Challenge #{challenge_id}\n"
                         f"Submitted by: {user.first_name}\n\n"
                         f"Submission ID: `{submission_id}`"
                     ),
@@ -1977,7 +1970,6 @@ class AmazingRaceBot:
         team_name = verification['team_name']
         challenge_id = verification['challenge_id']
         challenge = self.challenges[challenge_id - 1]
-        challenge_name = challenge['name']
         user_id = verification['user_id']
         user_name = verification['user_name']
         
@@ -2100,7 +2092,7 @@ class AmazingRaceBot:
         
         team_name = submission['team_name']
         challenge_id = submission['challenge_id']
-        challenge_name = self.challenges[challenge_id - 1]['name']
+        challenge = self.challenges[challenge_id - 1]
         user_id = submission['user_id']
         user_name = submission['user_name']
         
@@ -2128,7 +2120,7 @@ class AmazingRaceBot:
                 try:
                     response = (
                         f"✅ *Photo Approved!*\n\n"
-                        f"Your photo for *{challenge_name}* has been approved!\n"
+                        f"Your photo for *Challenge #{challenge_id}* has been approved!\n"
                         f"Progress: {completed}/{total} challenges"
                     )
                     
@@ -2145,7 +2137,6 @@ class AmazingRaceBot:
                     )
                     
                     # Send custom success message if configured
-                    challenge = self.challenges[challenge_id - 1]
                     await self.send_success_message_if_configured(challenge, user_id, context=context)
                 except Exception as e:
                     logger.error(f"Failed to notify submitter {user_id}: {e}")
@@ -2178,7 +2169,7 @@ class AmazingRaceBot:
                 
                 # Broadcast completion to team and admin (excluding submitter)
                 await self.broadcast_challenge_completion(
-                    context, team_name, challenge_id, challenge_name,
+                    context, team_name, challenge_id,
                     user_id, user_name, completed, total,
                     penalty_info, photo_verification_needed
                 )

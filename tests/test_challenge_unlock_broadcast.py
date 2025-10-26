@@ -18,13 +18,11 @@ class TestChallengeUnlockBroadcast(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -36,7 +34,6 @@ class TestChallengeUnlockBroadcast(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'riddle',
@@ -47,7 +44,6 @@ class TestChallengeUnlockBroadcast(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Challenge 3',
                         'description': 'Third challenge',
                         'location': 'Park',
                         'type': 'riddle',
@@ -124,7 +120,7 @@ class TestChallengeUnlockBroadcast(unittest.IsolatedAsyncioTestCase):
         message_text = new_challenge_messages[0][1]['text']
         self.assertIn("New Challenge Available!", message_text)
         self.assertIn("Challenge #2", message_text)
-        self.assertIn("Challenge 2", message_text)
+        self.assertIn("Challenge #2", message_text)
     
     async def test_no_broadcast_when_timeout_active(self):
         """Test that next challenge is NOT broadcast when there's an active timeout."""

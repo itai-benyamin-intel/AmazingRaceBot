@@ -211,7 +211,6 @@ When you complete a challenge after using hints, the next challenge will be lock
 ```yaml
 challenges:
   - id: 1
-    name: "Find the Landmark"
     description: "Take a team photo with the city skyline"
     location: "Downtown Viewpoint"
     type: "photo"
@@ -314,7 +313,6 @@ game:
   
   challenges:
     - id: 1
-      name: "Challenge Name"
       description: "What teams need to do"
       location: "Where to go"
       type: "photo"  # Challenge type (photo, riddle, code, qr, trivia, etc.)
@@ -326,7 +324,6 @@ game:
         - "Third hint (almost gives it away)"
     
     - id: 2
-      name: "Riddle Challenge"
       description: "What has keys but no locks?"
       location: "Library"
       type: "riddle"
@@ -338,7 +335,6 @@ game:
         - "It's used for typing"
     
     - id: 3
-      name: "Code Challenge"
       description: |
         Debug this function and submit the output for fib(5):
         def fib(n):
@@ -355,7 +351,6 @@ game:
           - "answer is 5"
     
     - id: 4
-      name: "Trivia Challenge"
       description: "Name three programming languages"
       location: "Anywhere"
       type: "trivia"
@@ -365,7 +360,6 @@ game:
       # No hints - this challenge is optional without hints
     
     - id: 5
-      name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
       type: "trivia"
@@ -385,7 +379,6 @@ game:
 ### Challenge Configuration Fields
 
 - **id**: Unique challenge number (sequential: 1, 2, 3, etc.)
-- **name**: Display name of the challenge
 - **description**: Instructions for the challenge
 - **location**: Where the challenge takes place
 - **type**: Challenge type (photo, riddle, code, qr, trivia, scavenger, team_activity, decryption, text)
@@ -422,7 +415,6 @@ Checklist challenges allow teams to submit answers progressively instead of all 
 **Example:**
 ```yaml
 - id: 5
-  name: "Programming Languages"
   description: "Name 3 popular programming languages"
   location: "Anywhere"
   type: "trivia"
@@ -473,7 +465,7 @@ AmazingRaceBot/
 
 ### Challenge System
 - Challenges are defined in the configuration file with types and verification methods
-- Each challenge has an ID, name, description, location, type, and verification config
+- Each challenge has an ID, description, location, type, and verification config
 - **Teams must complete challenges in sequential order (1, 2, 3, etc.)**
 - Each challenge can only be completed once per team
 - Next challenge is unlocked only after completing the previous one
@@ -485,7 +477,7 @@ AmazingRaceBot/
 - **Challenge Completion Broadcast**: When a team completes a challenge:
   - All team members receive a notification (except the submitter)
   - The admin receives a notification
-  - Message includes team name, challenge name, submitter, and progress
+  - Message includes team name, challenge ID, submitter, and progress
   - Special congratulations message when team finishes all challenges
 
 ### Winning

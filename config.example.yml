@@ -28,7 +28,6 @@ game:
   # - photo: Requires photo submission (manual admin verification)
   challenges:
     - id: 1
-      name: "Find the Landmark"
       description: "Take a team photo with the city skyline in the background"
       location: "Downtown Viewpoint"
       type: "photo"
@@ -45,7 +44,6 @@ game:
       success_message: "🎉 Great job finding the landmark! Head to the library for your next challenge."
       
     - id: 2
-      name: "Riddle Master"
       description: "I stand tall where knowledge flows, students gather in my shadow's throes. What am I?"
       location: "Campus"
       type: "riddle"
@@ -58,7 +56,6 @@ game:
       success_message: "🧩 Excellent! The library it is. Your next challenge involves some coding skills!"
       
     - id: 3
-      name: "Code Debug"
       description: |
         Fix this Python function to correctly calculate Fibonacci numbers:
         
@@ -81,7 +78,6 @@ game:
         # answer: "fibonacci"
       
     - id: 4
-      name: "QR Hunt"
       description: "Find the QR code hidden near the water fountain"
       location: "Main Courtyard"
       type: "qr"
@@ -90,7 +86,6 @@ game:
         answer: "FOUNTAIN_2024"  # QR code contains this text
       
     - id: 5
-      name: "Tech Trivia"
       description: "Name three inventors who contributed to the development of the modern computer (comma-separated)"
       location: "Anywhere"
       type: "trivia"
@@ -99,7 +94,6 @@ game:
         answer: "turing, lovelace, babbage"  # Accept if contains these names
       
     - id: 6
-      name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
       type: "trivia"
@@ -118,7 +112,6 @@ game:
         - "Japan's capital, France's capital, Egypt's capital..."
       
     - id: 7
-      name: "Team Pyramid"
       description: "Create a human pyramid with your team"
       location: "Outdoor Area"
       type: "team_activity"
@@ -126,7 +119,6 @@ game:
         method: "photo"
       
     - id: 8
-      name: "Scavenger Hunt"
       description: "Find and photograph 5 different types of transportation in the area"
       location: "Campus Area"
       type: "scavenger"
@@ -134,7 +126,6 @@ game:
         method: "photo"
       
     - id: 9
-      name: "Secret Message"
       description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
       location: "Anywhere"
       type: "decryption"

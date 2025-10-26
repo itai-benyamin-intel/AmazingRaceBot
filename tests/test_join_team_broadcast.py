@@ -20,13 +20,11 @@ class TestJoinTeamBroadcast(unittest.TestCase):
         config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Starting Point',
                         'type': 'riddle',

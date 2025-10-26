@@ -17,13 +17,11 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -34,7 +32,6 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'trivia',
@@ -45,7 +42,6 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Challenge 3',
                         'description': 'Third challenge',
                         'location': 'Park',
                         'type': 'photo',
@@ -100,7 +96,7 @@ class TestSubmitCommand(unittest.IsolatedAsyncioTestCase):
         update.message.reply_text.assert_called()
         call_args = update.message.reply_text.call_args[0][0]
         self.assertIn("Correct!", call_args)
-        self.assertIn("Challenge 1", call_args)
+        self.assertIn("Challenge #1", call_args)
     
     async def test_submit_with_number_as_answer(self):
         """Test submit command with a number as answer (no backward compatibility)."""
@@ -263,13 +259,11 @@ class TestCurrentChallengeCommand(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -280,7 +274,6 @@ class TestCurrentChallengeCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
                         'type': 'trivia',
@@ -326,7 +319,7 @@ class TestCurrentChallengeCommand(unittest.IsolatedAsyncioTestCase):
         call_args = update.message.reply_text.call_args[0][0]
         self.assertIn("Your Current Challenge", call_args)
         self.assertIn("Challenge #1", call_args)
-        self.assertIn("Challenge 1", call_args)
+        self.assertIn("Challenge #1", call_args)
         self.assertIn("/submit [answer]", call_args)
     
     async def test_current_challenge_no_team(self):

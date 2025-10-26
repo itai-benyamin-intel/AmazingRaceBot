@@ -21,14 +21,12 @@ class TestPhotoVerification(unittest.TestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'photo_verification_enabled': False,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Start Challenge',
                         'description': 'Starting point',
                         'location': 'Start',
                         'type': 'photo',
@@ -36,7 +34,6 @@ class TestPhotoVerification(unittest.TestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Second Challenge',
                         'description': 'Second location',
                         'location': 'Location 2',
                         'type': 'riddle',
@@ -190,14 +187,12 @@ class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'photo_verification_enabled': False,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Challenge 1',
                         'description': 'First challenge',
                         'location': 'Start',
                         'type': 'riddle',
@@ -205,7 +200,6 @@ class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Location 2',
                         'type': 'riddle',
@@ -213,7 +207,6 @@ class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Challenge 3',
                         'description': 'Third challenge',
                         'location': 'Location 3',
                         'type': 'trivia',
@@ -415,14 +408,12 @@ class TestPhotoVerificationCommands(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'photo_verification_enabled': False,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Test',
                         'description': 'Test',
                         'location': 'Test',
                         'type': 'photo',

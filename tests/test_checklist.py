@@ -23,13 +23,11 @@ class TestChecklistFeature(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Capital Cities',
                         'description': 'Name 5 capital cities',
                         'location': 'Anywhere',
                         'type': 'trivia',
@@ -46,7 +44,6 @@ class TestChecklistFeature(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Regular Challenge',
                         'description': 'A normal answer challenge',
                         'location': 'Library',
                         'type': 'riddle',

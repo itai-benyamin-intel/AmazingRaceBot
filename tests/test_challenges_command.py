@@ -17,13 +17,11 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'First Challenge',
                         'description': 'Complete the first task',
                         'location': 'Starting Point',
                         'type': 'photo',
@@ -31,7 +29,6 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Second Challenge',
                         'description': 'Solve the riddle',
                         'location': 'Library',
                         'type': 'riddle',
@@ -39,7 +36,6 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Third Challenge',
                         'description': 'Find the location',
                         'location': 'Park',
                         'type': 'location',
@@ -47,7 +43,6 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 4,
-                        'name': 'Fourth Challenge',
                         'description': 'Final task',
                         'location': 'Finish Line',
                         'type': 'photo',
@@ -93,12 +88,12 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         message = call_args[0][0]
         
         # Verify completed challenge is shown (brief format)
-        self.assertIn("First Challenge", message)
+        self.assertIn("Challenge #", message)
         self.assertIn("✅", message)
         self.assertIn("Complete the first task", message)
         
         # Verify current challenge is shown (brief format)
-        self.assertIn("Second Challenge", message)
+        self.assertIn("Challenge #", message)
         self.assertIn("(CURRENT)", message)
         self.assertIn("Solve the riddle", message)
         
@@ -108,8 +103,8 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("ℹ️", message)
         
         # Verify locked challenges are NOT shown
-        self.assertNotIn("Third Challenge", message)
-        self.assertNotIn("Fourth Challenge", message)
+        self.assertNotIn("Challenge #3", message)
+        self.assertNotIn("Challenge #4", message)
         self.assertNotIn("🔒", message)
         self.assertNotIn("LOCKED", message)
         
@@ -150,10 +145,10 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         message = call_args[0][0]
         
         # Verify all challenges are shown as completed (brief format)
-        self.assertIn("First Challenge", message)
-        self.assertIn("Second Challenge", message)
-        self.assertIn("Third Challenge", message)
-        self.assertIn("Fourth Challenge", message)
+        self.assertIn("Challenge #", message)
+        self.assertIn("Challenge #", message)
+        self.assertIn("Challenge #", message)
+        self.assertIn("Challenge #", message)
         
         # Verify all are marked as completed
         self.assertEqual(message.count("✅"), 4)
@@ -194,7 +189,7 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         message = call_args[0][0]
         
         # Verify only first challenge is shown as current (brief format)
-        self.assertIn("First Challenge", message)
+        self.assertIn("Challenge #", message)
         self.assertIn("(CURRENT)", message)
         self.assertIn("Complete the first task", message)
         
@@ -203,9 +198,9 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("📍 Location:", message)
         
         # Verify other challenges are NOT shown
-        self.assertNotIn("Second Challenge", message)
-        self.assertNotIn("Third Challenge", message)
-        self.assertNotIn("Fourth Challenge", message)
+        self.assertNotIn("Challenge #2", message)
+        self.assertNotIn("Challenge #3", message)
+        self.assertNotIn("Challenge #4", message)
         self.assertNotIn("🔒", message)
         self.assertNotIn("LOCKED", message)
     
@@ -233,16 +228,16 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         message = call_args[0][0]
         
         # Verify only first challenge is shown (brief format)
-        self.assertIn("First Challenge", message)
+        self.assertIn("Challenge #", message)
         self.assertIn("(CURRENT)", message)
         
         # Verify brief format
         self.assertNotIn("Type:", message)
         
         # Verify other challenges are NOT shown
-        self.assertNotIn("Second Challenge", message)
-        self.assertNotIn("Third Challenge", message)
-        self.assertNotIn("Fourth Challenge", message)
+        self.assertNotIn("Challenge #2", message)
+        self.assertNotIn("Challenge #3", message)
+        self.assertNotIn("Challenge #4", message)
 
 
 if __name__ == '__main__':

@@ -21,13 +21,11 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         self.config = {
             'telegram': {'bot_token': 'test_token'},
             'game': {
-                'name': 'Test Game',
                 'max_teams': 10,
                 'max_team_size': 5,
                 'challenges': [
                     {
                         'id': 1,
-                        'name': 'Text Challenge',
                         'description': 'A riddle',
                         'location': 'Start',
                         'type': 'riddle',
@@ -38,7 +36,6 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 2,
-                        'name': 'Photo Challenge',
                         'description': 'Take a photo',
                         'location': 'Park',
                         'type': 'photo',
@@ -48,7 +45,6 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         'id': 3,
-                        'name': 'Another Text Challenge',
                         'description': 'Answer a question',
                         'location': 'Library',
                         'type': 'trivia',
@@ -103,7 +99,7 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         # Check that the message indicates text is required
         self.assertIn('text answer is required', message.lower())
-        self.assertIn('Text Challenge', message)
+        self.assertIn('Challenge #1', message)
     
     async def test_text_sent_when_photo_expected(self):
         """Test that sending text when photo is expected shows an error message."""
@@ -141,7 +137,7 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         # Check that the message indicates photo is required
         self.assertIn('photo', message.lower())
-        self.assertIn('Photo Challenge', message)
+        self.assertIn('Challenge #2', message)
     
     async def test_correct_format_photo_accepted(self):
         """Test that sending a photo when photo is expected works correctly."""
@@ -250,11 +246,11 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         bot = AmazingRaceBot(self.test_config_file)
         
-        photo_challenge = self.config['game']['challenges'][1]  # Photo Challenge
+        photo_challenge = self.config['game']['challenges'][1]  # Photo Challenge (id=2)
         message = bot.get_format_mismatch_message('photo', photo_challenge)
         
-        self.assertIn('Photo Required', message)
-        self.assertIn('Photo Challenge', message)
+        self.assertIn('Challenge #', message)
+        self.assertIn('Challenge #2', message)
         self.assertIn('upload a photo', message.lower())
     
     async def test_get_format_mismatch_message_text(self):
@@ -264,11 +260,11 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
         
         bot = AmazingRaceBot(self.test_config_file)
         
-        text_challenge = self.config['game']['challenges'][0]  # Text Challenge
+        text_challenge = self.config['game']['challenges'][0]  # Text Challenge (id=1)
         message = bot.get_format_mismatch_message('text', text_challenge)
         
         self.assertIn('Text Answer Required', message)
-        self.assertIn('Text Challenge', message)
+        self.assertIn('Challenge #1', message)
         self.assertIn('text', message.lower())
 
 

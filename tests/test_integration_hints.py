@@ -14,14 +14,12 @@ def test_bot_initialization_with_hints():
     test_config = {
         'telegram': {'bot_token': 'test_token_12345'},
         'game': {
-            'name': 'Test Game',
             'max_teams': 10,
             'max_team_size': 5,
             'location_verification_enabled': False,
             'challenges': [
                 {
                     'id': 1,
-                    'name': 'Test Challenge 1',
                     'description': 'Test description',
                     'location': 'Test location',
                     'type': 'riddle',
@@ -33,7 +31,6 @@ def test_bot_initialization_with_hints():
                 },
                 {
                     'id': 2,
-                    'name': 'Test Challenge 2',
                     'description': 'Test description 2',
                     'location': 'Test location 2',
                     'type': 'photo',
@@ -46,7 +43,6 @@ def test_bot_initialization_with_hints():
                 },
                 {
                     'id': 3,
-                    'name': 'Test Challenge 3 (no hints)',
                     'description': 'Test description 3',
                     'location': 'Test location 3',
                     'type': 'trivia',
