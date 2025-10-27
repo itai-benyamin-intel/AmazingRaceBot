@@ -6,6 +6,9 @@ import os
 from datetime import datetime, timedelta
 from game_state import GameState
 
+# Timing tolerance for unlock time tests (in seconds)
+TIMING_TOLERANCE_SECONDS = 1
+
 
 class TestCustomTimeoutPenalty(unittest.TestCase):
     """Test cases for custom timeout penalty feature."""
@@ -111,8 +114,8 @@ class TestCustomTimeoutPenalty(unittest.TestCase):
         unlock_time = datetime.fromisoformat(unlock_time_str)
         
         expected_unlock_time = completion_time + timedelta(seconds=360)
-        # Allow 1 second difference due to timing
-        self.assertLess(abs((unlock_time - expected_unlock_time).total_seconds()), 1)
+        # Use module constant for timing tolerance
+        self.assertLess(abs((unlock_time - expected_unlock_time).total_seconds()), TIMING_TOLERANCE_SECONDS)
     
     def test_get_penalty_minutes_per_hint_default(self):
         """Test getting penalty minutes per hint with default value."""

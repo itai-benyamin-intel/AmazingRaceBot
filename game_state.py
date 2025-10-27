@@ -6,6 +6,9 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 
+# Default penalty per hint in minutes
+DEFAULT_PENALTY_MINUTES = 2
+
 
 class GameState:
     """Manages the state of the Amazing Race game."""
@@ -485,8 +488,8 @@ class GameState:
         """
         hint_count = self.get_hint_count(team_name, challenge_id)
         
-        # Get penalty minutes from challenge config, default to 2
-        penalty_minutes = 2
+        # Get penalty minutes from challenge config, use module constant for default
+        penalty_minutes = DEFAULT_PENALTY_MINUTES
         if challenge and 'timeout_penalty_minutes' in challenge:
             penalty_minutes = challenge['timeout_penalty_minutes']
         
@@ -503,7 +506,7 @@ class GameState:
         """
         if challenge and 'timeout_penalty_minutes' in challenge:
             return challenge['timeout_penalty_minutes']
-        return 2
+        return DEFAULT_PENALTY_MINUTES
     
     def set_challenge_completion_time(self, team_name: str, challenge_id: int) -> None:
         """Set the completion time for a challenge (used for penalty timing).
