@@ -171,7 +171,6 @@ class TestMultiChoiceChallengeFix(unittest.IsolatedAsyncioTestCase):
         
         # Test code (challenge 3) - uses global setting
         challenge3 = bot.challenges[2]
-        # Code challenges use global setting by default
         self.assertTrue(bot.requires_photo_verification(challenge3, 2))
     
     async def test_photo_challenge_still_requires_verification(self):
@@ -187,7 +186,8 @@ class TestMultiChoiceChallengeFix(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(bot.requires_photo_verification(challenge4, 3))
     
     async def test_explicit_requires_photo_verification_overrides(self):
-        """Test that explicit requires_photo_verification=True is honored even for multi_choice."""
+        """Test that explicit requires_photo_verification=True overrides the default 
+        multi_choice behavior (which is to not require photo verification)."""
         # Create config with explicit photo verification for multi_choice challenge
         config = {
             'telegram': {'bot_token': 'test_token'},

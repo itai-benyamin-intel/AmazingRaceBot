@@ -73,8 +73,9 @@ class AmazingRaceBot:
         if 'requires_photo_verification' in challenge:
             return challenge['requires_photo_verification']
         
-        # Multi-choice challenges never require photo verification by default
-        # as they are quiz-based and don't depend on physical location
+        # Multi-choice challenges don't require photo verification by default
+        # as they are quiz-based and don't depend on physical location.
+        # This can be overridden with explicit requires_photo_verification: true
         challenge_type = challenge.get('type', '')
         if challenge_type == 'multi_choice':
             return False
