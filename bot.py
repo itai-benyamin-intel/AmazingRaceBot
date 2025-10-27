@@ -971,10 +971,14 @@ class AmazingRaceBot:
                     self.game_state.create_tournament(challenge_id, eligible_teams, game_name)
                     tournament = self.game_state.get_tournament(challenge_id)
                     
-                    # If tournament auto-completed (single team), complete the challenge for that team
-                    if tournament and tournament['status'] == 'complete' and len(eligible_teams) == 1:
-                        # Complete the challenge for the single team
-                        self.game_state.complete_challenge(eligible_teams[0], challenge_id, len(self.challenges))
+                    # If tournament auto-completed, complete the challenge for the winning team(s)
+                    if tournament and tournament['status'] == 'complete':
+                        # Get the tournament winner(s) from rankings
+                        rankings = tournament.get('rankings', [])
+                        if rankings:
+                            # Complete challenge for the winner (first in rankings)
+                            winner = rankings[0]
+                            self.game_state.complete_challenge(winner, challenge_id, len(self.challenges))
                     
                     # Notify admin that tournament is ready
                     if self.admin_id:

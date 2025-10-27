@@ -774,7 +774,7 @@ class GameState:
         }
         
         # Check if tournament should auto-complete (single team or all byes in first round)
-        if bracket and len(bracket) > 0:
+        if len(bracket) > 0:
             first_round = bracket[0]
             all_complete = all(m['status'] in ['complete', 'bye'] for m in first_round)
             if all_complete:
