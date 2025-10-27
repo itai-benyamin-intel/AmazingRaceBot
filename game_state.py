@@ -23,6 +23,7 @@ class GameState:
         self.hint_usage: Dict[str, Dict] = {}  # Track hint usage per team
         self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
         self.pending_photo_verifications: Dict[str, Dict] = {}  # Track pending photo verifications for location
+        self.tournaments: Dict[int, Dict] = {}  # Track tournament state per challenge ID
         self.load_state()
     
     def load_state(self):
@@ -39,6 +40,7 @@ class GameState:
                     self.hint_usage = data.get('hint_usage', {})
                     self.pending_photo_submissions = data.get('pending_photo_submissions', {})
                     self.pending_photo_verifications = data.get('pending_photo_verifications', {})
+                    self.tournaments = data.get('tournaments', {})
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -53,7 +55,8 @@ class GameState:
                 'photo_verification_enabled': self.photo_verification_enabled,
                 'hint_usage': self.hint_usage,
                 'pending_photo_submissions': self.pending_photo_submissions,
-                'pending_photo_verifications': self.pending_photo_verifications
+                'pending_photo_verifications': self.pending_photo_verifications,
+                'tournaments': self.tournaments
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -197,6 +200,7 @@ class GameState:
         self.hint_usage = {}
         self.pending_photo_submissions = {}
         self.pending_photo_verifications = {}
+        self.tournaments = {}
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 
@@ -734,4 +738,283 @@ class GameState:
                 return False
         
         return True
+    
+    def create_tournament(self, challenge_id: int, team_names: List[str], game_name: str = "Tournament") -> bool:
+        """Create a new tournament for a challenge.
+        
+        Args:
+            challenge_id: ID of the challenge
+            team_names: List of team names participating
+            game_name: Name of the game being played
+            
+        Returns:
+            True if tournament was created, False if already exists
+        """
+        import random
+        
+        if str(challenge_id) in self.tournaments:
+            return False
+        
+        # Shuffle teams for random bracket
+        shuffled_teams = team_names.copy()
+        random.shuffle(shuffled_teams)
+        
+        # Create initial bracket
+        bracket = self._generate_bracket(shuffled_teams)
+        
+        self.tournaments[str(challenge_id)] = {
+            'challenge_id': challenge_id,
+            'game_name': game_name,
+            'teams': team_names,
+            'bracket': bracket,
+            'current_round': 0,
+            'rankings': [],  # Final rankings after tournament
+            'created_at': datetime.now().isoformat(),
+            'status': 'active'
+        }
+        
+        self.save_state()
+        return True
+    
+    def _generate_bracket(self, teams: List[str]) -> List[List[Dict]]:
+        """Generate tournament bracket with bye handling.
+        
+        Args:
+            teams: List of team names
+            
+        Returns:
+            List of rounds, each containing list of matches
+        """
+        if not teams:
+            return []
+        
+        # Round 1: Create initial matchups
+        matches = []
+        teams_copy = teams.copy()
+        
+        # If odd number, last team gets a bye
+        if len(teams_copy) % 2 == 1:
+            bye_team = teams_copy.pop()
+            matches.append({
+                'team1': bye_team,
+                'team2': None,  # Bye
+                'winner': bye_team,
+                'status': 'bye'
+            })
+        
+        # Create matches for remaining teams
+        while len(teams_copy) >= 2:
+            team1 = teams_copy.pop(0)
+            team2 = teams_copy.pop(0)
+            matches.append({
+                'team1': team1,
+                'team2': team2,
+                'winner': None,
+                'status': 'pending'
+            })
+        
+        return [matches]  # First round
+    
+    def get_tournament(self, challenge_id: int) -> Optional[Dict]:
+        """Get tournament data for a challenge.
+        
+        Args:
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Tournament data or None if not found
+        """
+        return self.tournaments.get(str(challenge_id))
+    
+    def get_current_round_matches(self, challenge_id: int) -> List[Dict]:
+        """Get matches for the current round of a tournament.
+        
+        Args:
+            challenge_id: ID of the challenge
+            
+        Returns:
+            List of matches in current round
+        """
+        tournament = self.get_tournament(challenge_id)
+        if not tournament:
+            return []
+        
+        current_round = tournament.get('current_round', 0)
+        bracket = tournament.get('bracket', [])
+        
+        if current_round >= len(bracket):
+            return []
+        
+        return bracket[current_round]
+    
+    def report_match_winner(self, challenge_id: int, winner_team: str) -> bool:
+        """Report the winner of a tournament match.
+        
+        Args:
+            challenge_id: ID of the challenge
+            winner_team: Name of the winning team
+            
+        Returns:
+            True if winner was recorded, False otherwise
+        """
+        tournament = self.get_tournament(challenge_id)
+        if not tournament:
+            return False
+        
+        current_round = tournament.get('current_round', 0)
+        bracket = tournament.get('bracket', [])
+        
+        if current_round >= len(bracket):
+            return False
+        
+        # Find the match with this team and mark winner
+        matches = bracket[current_round]
+        match_found = False
+        
+        for match in matches:
+            if match['status'] == 'pending' and (match['team1'] == winner_team or match['team2'] == winner_team):
+                match['winner'] = winner_team
+                match['status'] = 'complete'
+                match_found = True
+                break
+        
+        if not match_found:
+            return False
+        
+        # Check if all matches in current round are complete
+        all_complete = all(m['status'] in ['complete', 'bye'] for m in matches)
+        
+        if all_complete:
+            # Advance to next round or finish tournament
+            self._advance_round(challenge_id)
+        
+        self.save_state()
+        return True
+    
+    def _advance_round(self, challenge_id: int) -> None:
+        """Advance tournament to next round or complete it.
+        
+        Args:
+            challenge_id: ID of the challenge
+        """
+        tournament = self.tournaments[str(challenge_id)]
+        current_round = tournament['current_round']
+        bracket = tournament['bracket']
+        
+        # Get winners from current round
+        current_matches = bracket[current_round]
+        winners = [m['winner'] for m in current_matches if m['winner']]
+        losers = []
+        
+        for match in current_matches:
+            if match['status'] == 'complete':
+                if match['team1'] != match['winner']:
+                    losers.append(match['team1'])
+                if match['team2'] and match['team2'] != match['winner']:
+                    losers.append(match['team2'])
+        
+        # If only one winner, tournament is complete
+        if len(winners) == 1:
+            # Add final winner to rankings
+            tournament['rankings'].insert(0, winners[0])
+            
+            # Add remaining teams in reverse order (losers of final rounds)
+            for loser in losers:
+                if loser not in tournament['rankings']:
+                    tournament['rankings'].append(loser)
+            
+            tournament['status'] = 'complete'
+            self.save_state()
+            return
+        
+        # Create next round with winners
+        next_matches = []
+        winners_copy = winners.copy()
+        
+        # Handle odd number of winners (give bye to first team)
+        if len(winners_copy) % 2 == 1:
+            bye_team = winners_copy.pop(0)
+            next_matches.append({
+                'team1': bye_team,
+                'team2': None,
+                'winner': bye_team,
+                'status': 'bye'
+            })
+        
+        # Create matches
+        while len(winners_copy) >= 2:
+            team1 = winners_copy.pop(0)
+            team2 = winners_copy.pop(0)
+            next_matches.append({
+                'team1': team1,
+                'team2': team2,
+                'winner': None,
+                'status': 'pending'
+            })
+        
+        # Add next round to bracket
+        bracket.append(next_matches)
+        
+        # If we have losers and more than 2 teams total, create consolation round
+        if len(losers) > 1:
+            # Store losers for ranking later
+            for loser in losers:
+                if loser not in tournament['rankings']:
+                    tournament['rankings'].append(loser)
+        
+        # Move to next round
+        tournament['current_round'] += 1
+        self.save_state()
+    
+    def is_tournament_complete(self, challenge_id: int) -> bool:
+        """Check if tournament is complete.
+        
+        Args:
+            challenge_id: ID of the challenge
+            
+        Returns:
+            True if tournament is complete, False otherwise
+        """
+        tournament = self.get_tournament(challenge_id)
+        if not tournament:
+            return False
+        
+        return tournament.get('status') == 'complete'
+    
+    def get_tournament_last_place(self, challenge_id: int) -> Optional[str]:
+        """Get the last place team from a completed tournament.
+        
+        Args:
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Team name or None if tournament not complete
+        """
+        tournament = self.get_tournament(challenge_id)
+        if not tournament or tournament.get('status') != 'complete':
+            return None
+        
+        rankings = tournament.get('rankings', [])
+        if rankings:
+            return rankings[-1]  # Last in rankings is last place
+        
+        return None
+    
+    def reset_tournament(self, challenge_id: int) -> bool:
+        """Reset a tournament.
+        
+        Args:
+            challenge_id: ID of the challenge
+            
+        Returns:
+            True if tournament was reset, False if not found
+        """
+        challenge_key = str(challenge_id)
+        if challenge_key not in self.tournaments:
+            return False
+        
+        del self.tournaments[challenge_key]
+        self.save_state()
+        return True
+
 

@@ -155,43 +155,13 @@ Teams write or debug code to solve a specific problem.
 
 ---
 
-### 4. 📱 QR Hunt Challenge
-
-Teams find and scan hidden QR codes at locations.
-
-**Configuration Example:**
-```yaml
-- id: 4
-  name: "Hidden QR Code"
-  description: "Find the QR code hidden near the water fountain"
-  location: "Main Courtyard"
-  type: "qr"
-  verification:
-    method: "answer"
-    answer: "FOUNTAIN_2024"
-```
-
-**How it works:**
-- Place QR codes containing specific text at locations
-- Teams scan the QR code with any QR scanner app
-- They submit the text from the QR code: `/submit 4 FOUNTAIN_2024`
-- Bot verifies the code matches
-
-**QR Code Setup:**
-- Use online QR code generators
-- Encode a unique text string for each location
-- Print and place at challenge locations
-- Update the `answer` field with the encoded text
-
----
-
-### 5. ❓ Trivia Challenge
+### 4. ❓ Trivia Challenge
 
 Teams answer questions related to specific topics.
 
 **Configuration Example:**
 ```yaml
-- id: 5
+- id: 4
   name: "Tech Trivia"
   description: "Name three inventors who contributed to the development of the modern computer"
   location: "Anywhere"
@@ -203,7 +173,7 @@ Teams answer questions related to specific topics.
 
 **How it works:**
 - Teams answer the trivia question
-- Submit with `/submit 5 Alan Turing, Ada Lovelace, Charles Babbage`
+- Submit with `/submit 4 Alan Turing, Ada Lovelace, Charles Babbage`
 - Bot checks if ALL required keywords are present in the answer
 
 **Multiple keyword verification:**
@@ -216,13 +186,13 @@ Teams answer questions related to specific topics.
 
 ---
 
-### 6. 🔍 Scavenger Hunt Challenge
+### 5. 🔍 Scavenger Hunt Challenge
 
 Teams find and document specific items.
 
 **Configuration Example:**
 ```yaml
-- id: 6
+- id: 5
   name: "Transportation Hunt"
   description: "Find and photograph 5 different types of transportation in the area"
   location: "Campus Area"
@@ -234,18 +204,18 @@ Teams find and document specific items.
 **How it works:**
 - Teams search for the required items
 - Take photos as proof
-- Submit photo via `/submit 6` then send the photo
+- Submit photo via `/submit 5` then send the photo
 - Can be used for single items or collections
 
 ---
 
-### 7. 🤝 Team Activity Challenge
+### 6. 🤝 Team Activity Challenge
 
 Teams perform a specific activity together.
 
 **Configuration Example:**
 ```yaml
-- id: 7
+- id: 6
   name: "Human Pyramid"
   description: "Create a human pyramid with your team"
   location: "Outdoor Area"
@@ -257,7 +227,7 @@ Teams perform a specific activity together.
 **How it works:**
 - Teams perform the activity together
 - Take a photo as proof
-- Submit via `/submit 7` then send the photo
+- Submit via `/submit 6` then send the photo
 
 **Activity ideas:**
 - Human pyramids
@@ -267,13 +237,13 @@ Teams perform a specific activity together.
 
 ---
 
-### 8. 🔐 Decryption Challenge
+### 7. 🔐 Decryption Challenge
 
 Teams decrypt encoded messages.
 
 **Configuration Example:**
 ```yaml
-- id: 8
+- id: 7
   name: "Caesar Cipher"
   description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
   location: "Anywhere"
@@ -293,6 +263,59 @@ Teams decrypt encoded messages.
 - Morse code
 - Base64 encoding
 - Custom ciphers
+
+---
+
+### 8. 🏆 Tournament Challenge
+
+Teams compete in bracket-style tournaments where they face off against each other in games or competitions.
+
+**Configuration Example:**
+```yaml
+- id: 8
+  name: "Amazing Race Tournament"
+  description: "Teams will compete in a tournament-style rock-paper-scissors championship"
+  location: "Arena"
+  type: "tournament"
+  verification:
+    method: "tournament"
+  tournament:
+    game_name: "Rock Paper Scissors"
+    timeout_minutes: 5  # Penalty for last place (optional, defaults to 5)
+```
+
+**How it works:**
+- When teams reach this challenge, they are entered into a tournament bracket
+- The bot automatically generates randomized matchups
+- Teams compete in parallel (all matches in a round happen simultaneously)
+- Admin reports match winners using `/tournamentwin <challenge_id> <team_name>`
+- Winners advance to the next round
+- Losers compete in subsequent consolation rounds to determine final rankings
+- The last-place team receives a timeout penalty before the next challenge
+
+**Tournament Flow:**
+1. **Bracket Generation**: When the first team reaches the challenge, the bot creates a randomized bracket
+2. **Round Announcements**: The bot announces pairings for each round
+3. **Match Reporting**: Admin observes matches and reports winners
+4. **Advancement**: Winners move to the next round, losers to consolation brackets
+5. **Final Rankings**: Tournament continues until all positions are determined
+6. **Penalty Application**: Last-place team gets a timeout before next challenge unlocks
+
+**Handling Odd Numbers:**
+- If there's an odd number of teams, one team receives a bye (automatic advancement)
+- Byes are assigned to maintain bracket balance
+
+**Admin Commands:**
+- `/tournamentwin <challenge_id> <team_name>` - Report match winner
+- `/tournamentstatus <challenge_id>` - View current tournament state
+- `/tournamentreset <challenge_id>` - Reset tournament (if needed)
+
+**Use cases:**
+- Physical competitions (sports, games)
+- Trivia contests
+- Skill challenges
+- Creative competitions
+- Any head-to-head format
 
 ---
 
@@ -328,6 +351,22 @@ verification:
 - Use comma-separated keywords
 - ALL keywords must be present in the user's answer
 - Example: `answer: "python, java, javascript"`
+
+### Tournament Verification
+
+```yaml
+verification:
+  method: "tournament"
+tournament:
+  game_name: "Rock Paper Scissors"
+  timeout_minutes: 5  # Optional penalty for last place
+```
+
+- Admin creates tournament bracket automatically when teams arrive
+- Teams compete in matches based on bracket pairings
+- Admin reports winners using `/tournamentwin` command
+- Winners advance, losers compete for placement
+- Last-place team receives configurable timeout penalty
 
 ## Best Practices
 
@@ -389,24 +428,26 @@ challenges:
       method: "answer"
       answer: "python, java, javascript"
   
-  # QR hunt
-  - id: 4
-    name: "Hidden Code"
-    description: "Find the QR code at the library entrance"
-    location: "Library"
-    type: "qr"
-    verification:
-      method: "answer"
-      answer: "LIBRARY_SECRET_2024"
-  
   # Team activity
-  - id: 5
+  - id: 4
     name: "Tower Challenge"
     description: "Build the tallest tower using provided materials and photograph it"
     location: "Activity Zone"
     type: "team_activity"
     verification:
       method: "photo"
+  
+  # Tournament challenge
+  - id: 5
+    name: "Team Tournament"
+    description: "Compete in a bracket-style rock-paper-scissors tournament"
+    location: "Arena"
+    type: "tournament"
+    verification:
+      method: "tournament"
+    tournament:
+      game_name: "Rock Paper Scissors"
+      timeout_minutes: 5
   
   # Decryption
   - id: 6

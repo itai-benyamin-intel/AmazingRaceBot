@@ -82,13 +82,13 @@ class AmazingRaceBot:
             'photo': '📷',
             'riddle': '🧩',
             'code': '💻',
-            'qr': '📱',
             'trivia': '❓',
             'location': '📍',
             'text': '📝',
             'scavenger': '🔍',
             'team_activity': '🤝',
-            'decryption': '🔐'
+            'decryption': '🔐',
+            'tournament': '🏆'
         }
         return type_emojis.get(challenge_type, '🎯')
     
@@ -267,14 +267,14 @@ class AmazingRaceBot:
                 return "📝 Reply with your answer."
             elif challenge_type == 'decryption':
                 return "🔓 Reply with the decrypted message."
-            elif challenge_type == 'qr':
-                return "📱 Reply with the text from the QR code."
             else:
                 return "📝 Reply with your answer."
         elif method == 'location':
             return "📍 You need to be at the correct location."
         elif method == 'auto':
             return "✅ This challenge is auto-verified."
+        elif method == 'tournament':
+            return "🏆 Admin will report tournament results."
         else:
             return "📝 Submit your response to complete this challenge."
     
@@ -953,6 +953,53 @@ class AmazingRaceBot:
         type_emoji = self.get_challenge_type_emoji(challenge_type)
         instructions = self.get_challenge_instructions(challenge)
         
+        # Check if this is a tournament challenge and initialize if needed
+        verification_method = challenge.get('verification', {}).get('method')
+        if verification_method == 'tournament':
+            tournament = self.game_state.get_tournament(challenge_id)
+            if not tournament:
+                # Initialize tournament with all teams that have reached this challenge
+                eligible_teams = [
+                    name for name, data in self.game_state.teams.items()
+                    if data.get('current_challenge_index', 0) >= current_challenge_index
+                ]
+                
+                if len(eligible_teams) >= 2:
+                    tournament_config = challenge.get('tournament', {})
+                    game_name = tournament_config.get('game_name', 'Tournament')
+                    
+                    self.game_state.create_tournament(challenge_id, eligible_teams, game_name)
+                    
+                    # Notify admin that tournament is ready
+                    if self.admin_id:
+                        try:
+                            tournament = self.game_state.get_tournament(challenge_id)
+                            first_round = self.game_state.get_current_round_matches(challenge_id)
+                            
+                            admin_msg = (
+                                f"🏆 *Tournament Started!*\n\n"
+                                f"Challenge: {challenge['name']}\n"
+                                f"Game: {game_name}\n"
+                                f"Teams: {len(eligible_teams)}\n\n"
+                                f"📋 *First Round Matches:*\n\n"
+                            )
+                            
+                            for i, match in enumerate(first_round):
+                                if match['status'] == 'pending':
+                                    admin_msg += f"{i+1}. {match['team1']} vs {match['team2']}\n"
+                                elif match['status'] == 'bye':
+                                    admin_msg += f"{i+1}. {match['team1']} (bye)\n"
+                            
+                            admin_msg += f"\nUse `/tournamentwin {challenge_id} <team_name>` to report winners."
+                            
+                            await context.bot.send_message(
+                                chat_id=self.admin_id,
+                                text=admin_msg,
+                                parse_mode='Markdown'
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to notify admin of tournament start: {e}")
+        
         # Check if challenge is locked due to penalty
         is_locked = False
         penalty_info = None
@@ -1020,6 +1067,38 @@ class AmazingRaceBot:
                 
                 message += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed\n"
                 message += "💡 *Tip:* Submit each item individually or all at once!\n\n"
+            
+            # Check if this is a tournament challenge
+            if verification_method == 'tournament':
+                tournament = self.game_state.get_tournament(challenge_id)
+                if tournament:
+                    tournament_config = challenge.get('tournament', {})
+                    game_name = tournament_config.get('game_name', 'Tournament')
+                    
+                    message += f"🏆 *Tournament: {game_name}*\n\n"
+                    
+                    # Show current matches for this team
+                    current_matches = self.game_state.get_current_round_matches(challenge_id)
+                    team_match = None
+                    for match in current_matches:
+                        if match['team1'] == team_name or match['team2'] == team_name:
+                            team_match = match
+                            break
+                    
+                    if team_match:
+                        if team_match['status'] == 'pending':
+                            if team_match['team2']:
+                                message += f"⚔️ Your match: {team_match['team1']} vs {team_match['team2']}\n"
+                            else:
+                                message += f"🎫 You have a bye this round\n"
+                            message += "Waiting for admin to report results...\n\n"
+                        elif team_match['status'] == 'bye':
+                            message += f"🎫 You have a bye and advance automatically\n\n"
+                    
+                    if tournament['status'] == 'complete':
+                        message += "Tournament is complete!\n"
+                else:
+                    message += "🏆 *Tournament will start when all teams arrive*\n\n"
             
             # Add hints information
             hints = challenge.get('hints', [])
@@ -2349,6 +2428,212 @@ class AmazingRaceBot:
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
+    async def tournamentwin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /tournamentwin command (admin only) - report a tournament match winner."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can report tournament results!")
+            return
+        
+        if not self.game_state.game_started:
+            await update.message.reply_text("The game hasn't started yet!")
+            return
+        
+        # Parse command: /tournamentwin <challenge_id> <team_name>
+        if not context.args or len(context.args) < 2:
+            await update.message.reply_text(
+                "Usage: `/tournamentwin <challenge_id> <team_name>`\n\n"
+                "Example: `/tournamentwin 5 Team Alpha`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        try:
+            challenge_id = int(context.args[0])
+            team_name = ' '.join(context.args[1:])
+        except ValueError:
+            await update.message.reply_text("Invalid challenge ID! Please use a number.")
+            return
+        
+        # Verify challenge exists and is a tournament
+        if challenge_id < 1 or challenge_id > len(self.challenges):
+            await update.message.reply_text(f"Challenge {challenge_id} doesn't exist!")
+            return
+        
+        challenge = self.challenges[challenge_id - 1]
+        if challenge.get('verification', {}).get('method') != 'tournament':
+            await update.message.reply_text(f"Challenge {challenge_id} is not a tournament challenge!")
+            return
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await update.message.reply_text(f"Team '{team_name}' doesn't exist!")
+            return
+        
+        # Get or create tournament
+        tournament = self.game_state.get_tournament(challenge_id)
+        if not tournament:
+            await update.message.reply_text(
+                f"No active tournament for challenge {challenge_id}!\n"
+                "Tournament will be created when teams reach this challenge."
+            )
+            return
+        
+        # Report winner
+        success = self.game_state.report_match_winner(challenge_id, team_name)
+        
+        if not success:
+            await update.message.reply_text(
+                f"❌ Could not record win for {team_name}.\n\n"
+                "Possible reasons:\n"
+                "- Team is not in a pending match\n"
+                "- Match already completed\n"
+                "- Tournament already finished"
+            )
+            return
+        
+        # Send confirmation
+        await update.message.reply_text(
+            f"✅ *Match Winner Recorded*\n\n"
+            f"Winner: {team_name}\n"
+            f"Challenge: {challenge['name']}",
+            parse_mode='Markdown'
+        )
+        
+        # Check if tournament is complete
+        if self.game_state.is_tournament_complete(challenge_id):
+            last_place = self.game_state.get_tournament_last_place(challenge_id)
+            tournament_config = challenge.get('tournament', {})
+            timeout_minutes = tournament_config.get('timeout_minutes', 5)
+            
+            completion_msg = (
+                f"🏆 *Tournament Complete!*\n\n"
+                f"Challenge: {challenge['name']}\n"
+                f"Last Place: {last_place}\n"
+                f"Penalty: {timeout_minutes} minute timeout"
+            )
+            await update.message.reply_text(completion_msg, parse_mode='Markdown')
+            
+            # Complete the challenge for all teams except last place
+            for team_name in tournament['teams']:
+                if team_name != last_place:
+                    self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges))
+            
+            # Apply timeout penalty to last place team
+            if last_place:
+                self.game_state.complete_challenge(last_place, challenge_id, len(self.challenges))
+                # The penalty is handled by the hint system (timeout_penalty_minutes)
+                # We'll set a completion time offset to simulate the penalty
+        else:
+            # Show next round matches
+            current_matches = self.game_state.get_current_round_matches(challenge_id)
+            if current_matches:
+                next_msg = "📋 *Next Matches:*\n\n"
+                for i, match in enumerate(current_matches):
+                    if match['status'] == 'pending':
+                        next_msg += f"{i+1}. {match['team1']} vs {match['team2']}\n"
+                    elif match['status'] == 'bye':
+                        next_msg += f"{i+1}. {match['team1']} (bye)\n"
+                
+                await update.message.reply_text(next_msg, parse_mode='Markdown')
+    
+    async def tournamentstatus_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /tournamentstatus command (admin only) - view tournament status."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can view tournament status!")
+            return
+        
+        if not self.game_state.game_started:
+            await update.message.reply_text("The game hasn't started yet!")
+            return
+        
+        # Parse command: /tournamentstatus <challenge_id>
+        if not context.args or len(context.args) < 1:
+            await update.message.reply_text(
+                "Usage: `/tournamentstatus <challenge_id>`\n\n"
+                "Example: `/tournamentstatus 5`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        try:
+            challenge_id = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text("Invalid challenge ID! Please use a number.")
+            return
+        
+        # Get tournament
+        tournament = self.game_state.get_tournament(challenge_id)
+        if not tournament:
+            await update.message.reply_text(f"No tournament found for challenge {challenge_id}!")
+            return
+        
+        challenge = self.challenges[challenge_id - 1]
+        
+        # Build status message
+        status_msg = f"🏆 *Tournament Status*\n\n"
+        status_msg += f"Challenge: {challenge['name']}\n"
+        status_msg += f"Game: {tournament['game_name']}\n"
+        status_msg += f"Status: {tournament['status']}\n"
+        status_msg += f"Current Round: {tournament['current_round'] + 1}\n\n"
+        
+        # Show current round matches
+        current_matches = self.game_state.get_current_round_matches(challenge_id)
+        if current_matches:
+            status_msg += "📋 *Current Round Matches:*\n\n"
+            for i, match in enumerate(current_matches):
+                if match['status'] == 'pending':
+                    status_msg += f"{i+1}. {match['team1']} vs {match['team2']} - ⏳ Pending\n"
+                elif match['status'] == 'complete':
+                    status_msg += f"{i+1}. {match['team1']} vs {match['team2']} - ✅ Winner: {match['winner']}\n"
+                elif match['status'] == 'bye':
+                    status_msg += f"{i+1}. {match['team1']} - 🎫 Bye\n"
+        
+        if tournament['status'] == 'complete':
+            rankings = tournament.get('rankings', [])
+            if rankings:
+                status_msg += "\n🏅 *Final Rankings:*\n\n"
+                for i, team in enumerate(rankings):
+                    status_msg += f"{i+1}. {team}\n"
+        
+        await update.message.reply_text(status_msg, parse_mode='Markdown')
+    
+    async def tournamentreset_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /tournamentreset command (admin only) - reset a tournament."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can reset tournaments!")
+            return
+        
+        # Parse command: /tournamentreset <challenge_id>
+        if not context.args or len(context.args) < 1:
+            await update.message.reply_text(
+                "Usage: `/tournamentreset <challenge_id>`\n\n"
+                "Example: `/tournamentreset 5`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        try:
+            challenge_id = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text("Invalid challenge ID! Please use a number.")
+            return
+        
+        # Reset tournament
+        success = self.game_state.reset_tournament(challenge_id)
+        
+        if success:
+            await update.message.reply_text(
+                f"✅ Tournament for challenge {challenge_id} has been reset.",
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                f"❌ No tournament found for challenge {challenge_id}.",
+                parse_mode='Markdown'
+            )
 
     
     async def unrecognized_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2466,6 +2751,9 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("reject", self.reject_command))
 
         application.add_handler(CommandHandler("togglephotoverify", self.togglephotoverify_command))
+        application.add_handler(CommandHandler("tournamentwin", self.tournamentwin_command))
+        application.add_handler(CommandHandler("tournamentstatus", self.tournamentstatus_command))
+        application.add_handler(CommandHandler("tournamentreset", self.tournamentreset_command))
         
         # Add callback query handlers
         application.add_handler(CallbackQueryHandler(

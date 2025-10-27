@@ -1,6 +1,23 @@
 # Changelog
 
-## [Unreleased] - 2025-10-23
+## [Unreleased] - 2025-10-27
+
+### Added
+- **Tournament Challenge Type**: New competitive challenge format where teams compete head-to-head
+  - Automatic bracket generation with randomized matchups
+  - Support for odd numbers of teams with bye handling
+  - Admin commands to report match results
+  - Configurable timeout penalty for last-place team
+  - Parallel match execution within rounds
+  - Consolation brackets for determining final rankings
+
+### Removed
+- **QR Hunt Challenge Type**: Removed redundant QR challenge type
+  - Removed from configuration examples
+  - Removed from documentation
+  - Removed emoji and type references from code
+
+## [Previous] - 2025-10-23
 
 ### Added
 - **Challenge Completion Broadcast**: When a challenge is solved, a confirmation message is broadcast to:
@@ -12,7 +29,6 @@
   - Photo challenges: Submit photos (auto-accepted, admin receives copy)
   - Riddle challenges: Text answer verification with keyword matching
   - Code challenges: Submit code solutions or results
-  - QR Hunt challenges: Scan and submit QR code text
   - Trivia challenges: Support multiple required keywords
   - Scavenger Hunt: Find and photograph items
   - Team Activity: Photo verification for team activities
@@ -22,7 +38,7 @@
   - Case-insensitive matching with keyword support
   - Photo submissions auto-accepted with admin notification
 - **Challenge Configuration**:
-  - `type` field for each challenge (photo, riddle, code, qr, trivia, etc.)
+  - `type` field for each challenge (photo, riddle, code, trivia, tournament, etc.)
   - `verification` object with `method` and `answer` fields
   - Flexible answer matching (exact, keyword, or multi-keyword)
 - **Enhanced Challenge Display**:

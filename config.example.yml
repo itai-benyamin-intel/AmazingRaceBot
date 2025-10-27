@@ -16,16 +16,17 @@ game:
   # - photo: Teams submit photos (e.g., team photo at location, completed puzzle)
   # - riddle: Teams solve riddles/puzzles and submit text answer
   # - code: Teams write/debug code and submit solution
-  # - qr: Teams find and scan QR codes (auto-verified)
   # - trivia: Teams answer trivia questions
   # - text: General text submission challenge
   # - scavenger: Teams find and document items (via photos)
   # - team_activity: Teams perform activities (verified by photo/video)
   # - decryption: Teams decrypt encoded messages
+  # - tournament: Teams compete in bracket-style tournaments
   #
   # Verification Methods:
   # - answer: Text answer that must match (case-insensitive, trimmed)
   # - photo: Requires photo submission (manual admin verification)
+  # - tournament: Admin reports match results to determine winners
   #
   # Photo Verification for Location Arrival:
   # - requires_photo_verification: Optional boolean field per challenge
@@ -100,15 +101,6 @@ game:
       requires_photo_verification: false
       
     - id: 4
-      name: "QR Hunt"
-      description: "Find the QR code hidden near the water fountain"
-      location: "Main Courtyard"
-      type: "qr"
-      verification:
-        method: "answer"
-        answer: "FOUNTAIN_2024"  # QR code contains this text
-      
-    - id: 5
       name: "Tech Trivia"
       description: "Name three inventors who contributed to the development of the modern computer (comma-separated)"
       location: "Anywhere"
@@ -117,7 +109,7 @@ game:
         method: "answer"
         answer: "turing, lovelace, babbage"  # Accept if contains these names
       
-    - id: 6
+    - id: 5
       name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
@@ -136,7 +128,7 @@ game:
         - "Think about each continent: Asia, Europe, Africa, South America, Australia"
         - "Japan's capital, France's capital, Egypt's capital..."
       
-    - id: 7
+    - id: 6
       name: "Team Pyramid"
       description: "Create a human pyramid with your team"
       location: "Outdoor Area"
@@ -144,7 +136,7 @@ game:
       verification:
         method: "photo"
       
-    - id: 8
+    - id: 7
       name: "Scavenger Hunt"
       description: "Find and photograph 5 different types of transportation in the area"
       location: "Campus Area"
@@ -152,7 +144,7 @@ game:
       verification:
         method: "photo"
       
-    - id: 9
+    - id: 8
       name: "Secret Message"
       description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
       location: "Anywhere"
@@ -160,6 +152,20 @@ game:
       verification:
         method: "answer"
         answer: "congratulations"
+    
+    # Example tournament challenge (optional - for advanced events)
+    # Tournament challenges create bracket-style competitions between teams
+    # Tournaments are automatically created when teams reach this challenge
+    # - id: 9
+    #   name: "Team Championship"
+    #   description: "Teams will compete in a tournament-style rock-paper-scissors championship"
+    #   location: "Arena"
+    #   type: "tournament"
+    #   verification:
+    #     method: "tournament"
+    #   tournament:
+    #     game_name: "Rock Paper Scissors"  # Required: Name of the game/competition
+    #     timeout_minutes: 5  # Optional: Penalty timeout for last-place team (default: 5 minutes)
 
 # Admin user (Telegram user ID)
 # Note: Only one admin is allowed
