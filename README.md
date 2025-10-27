@@ -151,8 +151,8 @@ The bot will start and be ready to receive commands!
 - `/reject` - View pending photo submissions (same as `/approve`)
 - `/togglephotoverify` - Enable/disable photo verification for location arrival (challenges 2+)
 
-**Tournament Commands:**
-- `/tournamentwin <challenge_id> <team_name>` - Report match winner in tournament
+**Tournament Commands** (tournaments auto-created when teams reach tournament challenge):
+- `/tournamentwin <challenge_id> <team_name>` - Report match winner in active tournament
 - `/tournamentstatus <challenge_id>` - View current tournament bracket and status
 - `/tournamentreset <challenge_id>` - Reset a tournament (if needed)
 
