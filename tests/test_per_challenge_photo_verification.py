@@ -45,9 +45,9 @@ class TestPerChallengePhotoVerification(unittest.IsolatedAsyncioTestCase):
                     {
                         'id': 3,
                         'name': 'Challenge 3',
-                        'description': 'Third challenge - no photo verification (trivia)',
+                        'description': 'Third challenge - no photo verification (multi_choice)',
                         'location': 'Location 3',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {'method': 'answer', 'answer': 'test3'},
                         'requires_photo_verification': False
                     },

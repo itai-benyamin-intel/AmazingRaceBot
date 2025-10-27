@@ -216,7 +216,7 @@ class TestPhotoVerificationBypass(unittest.IsolatedAsyncioTestCase):
                         'name': 'Challenge 3',
                         'description': 'Third challenge',
                         'location': 'Location 3',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {'method': 'answer', 'answer': 'test3'}
                     }
                 ]

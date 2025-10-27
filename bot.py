@@ -82,7 +82,7 @@ class AmazingRaceBot:
             'photo': '📷',
             'riddle': '🧩',
             'code': '💻',
-            'trivia': '❓',
+            'multi_choice': '❓',
             'location': '📍',
             'text': '📝',
             'scavenger': '🔍',
@@ -174,9 +174,9 @@ class AmazingRaceBot:
         # Standard answer verification
         expected_answer = verification.get('answer', '').lower().strip()
         
-        # Check if the expected answer is a comma-separated list (for trivia)
+        # Check if the expected answer is a comma-separated list (for multi_choice)
         if ',' in expected_answer:
-            # For trivia with multiple answers, check if user answer contains all required keywords
+            # For multi_choice with multiple answers, check if user answer contains all required keywords
             required_keywords = [kw.strip() for kw in expected_answer.split(',')]
             is_correct = all(keyword in user_answer for keyword in required_keywords)
         else:
@@ -263,7 +263,7 @@ class AmazingRaceBot:
                 return "💡 Reply with your answer to this riddle."
             elif challenge_type == 'code':
                 return "💻 Reply with your code solution or the result."
-            elif challenge_type == 'trivia':
+            elif challenge_type == 'multi_choice':
                 return "📝 Reply with your answer."
             elif challenge_type == 'decryption':
                 return "🔓 Reply with the decrypted message."

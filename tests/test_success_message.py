@@ -38,7 +38,7 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
                         'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {
                             'method': 'answer',
                             'answer': 'test2'
@@ -167,7 +167,7 @@ class TestSuccessMessage(unittest.IsolatedAsyncioTestCase):
             'name': 'Challenge 4',
             'description': 'Fourth challenge',
             'location': 'Museum',
-            'type': 'trivia',
+            'type': 'multi_choice',
             'verification': {
                 'method': 'answer',
                 'answer': 'test4'

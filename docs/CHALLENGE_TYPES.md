@@ -155,24 +155,24 @@ Teams write or debug code to solve a specific problem.
 
 ---
 
-### 4. ❓ Trivia Challenge
+### 4. ❓ Multi Choice Challenge
 
 Teams answer questions related to specific topics.
 
 **Configuration Example:**
 ```yaml
 - id: 4
-  name: "Tech Trivia"
+  name: "Tech Multi Choice"
   description: "Name three inventors who contributed to the development of the modern computer"
   location: "Anywhere"
-  type: "trivia"
+  type: "multi_choice"
   verification:
     method: "answer"
     answer: "turing, lovelace, babbage"
 ```
 
 **How it works:**
-- Teams answer the trivia question
+- Teams answer the multi choice question
 - Submit with `/submit 4 Alan Turing, Ada Lovelace, Charles Babbage`
 - Bot checks if ALL required keywords are present in the answer
 
@@ -312,7 +312,7 @@ Teams compete in bracket-style tournaments where they face off against each othe
 
 **Use cases:**
 - Physical competitions (sports, games)
-- Trivia contests
+- Multi choice contests
 - Skill challenges
 - Creative competitions
 - Any head-to-head format
@@ -347,7 +347,7 @@ verification:
 - Case-insensitive matching
 - Example: `answer: "keyboard"` matches "The answer is keyboard"
 
-**Multiple keywords (trivia):**
+**Multiple keywords (multi choice):**
 - Use comma-separated keywords
 - ALL keywords must be present in the user's answer
 - Example: `answer: "python, java, javascript"`
@@ -382,7 +382,7 @@ tournament:
 
 1. **Use lowercase**: Always use lowercase in the `answer` field
 2. **Simple answers**: Keep expected answers simple and clear
-3. **Keywords**: For trivia, use distinctive keywords that are unlikely to appear by accident
+3. **Keywords**: For multi choice, use distinctive keywords that are unlikely to appear by accident
 4. **Test verification**: Test answer matching with various inputs
 
 ### Photo Challenges
@@ -418,12 +418,12 @@ challenges:
       method: "answer"
       answer: "clock"
   
-  # Tech trivia
+  # Tech multi choice
   - id: 3
     name: "Programming Languages"
     description: "Name three popular programming languages (comma-separated)"
     location: "Anywhere"
-    type: "trivia"
+    type: "multi_choice"
     verification:
       method: "answer"
       answer: "python, java, javascript"
@@ -470,7 +470,7 @@ challenges:
 ### Answer not being accepted
 - Check for typos in the config `answer` field
 - Remember answers are case-insensitive
-- For trivia, ensure all keywords are present
+- For multi choice, ensure all keywords are present
 
 ### Photos not working
 - Ensure teams send photos (not files or documents)

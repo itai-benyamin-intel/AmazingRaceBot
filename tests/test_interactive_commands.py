@@ -37,7 +37,7 @@ class TestInteractiveCommands(unittest.IsolatedAsyncioTestCase):
                         'name': 'Challenge 2',
                         'description': 'Second challenge',
                         'location': 'Library',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {
                             'method': 'answer',
                             'answer': 'test2'

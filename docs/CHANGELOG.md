@@ -29,7 +29,7 @@
   - Photo challenges: Submit photos (auto-accepted, admin receives copy)
   - Riddle challenges: Text answer verification with keyword matching
   - Code challenges: Submit code solutions or results
-  - Trivia challenges: Support multiple required keywords
+  - Multi choice challenges: Support multiple required keywords
   - Scavenger Hunt: Find and photograph items
   - Team Activity: Photo verification for team activities
   - Decryption challenges: Decode messages and submit answers
@@ -38,7 +38,7 @@
   - Case-insensitive matching with keyword support
   - Photo submissions auto-accepted with admin notification
 - **Challenge Configuration**:
-  - `type` field for each challenge (photo, riddle, code, trivia, tournament, etc.)
+  - `type` field for each challenge (photo, riddle, code, multi_choice, tournament, etc.)
   - `verification` object with `method` and `answer` fields
   - Flexible answer matching (exact, keyword, or multi-keyword)
 - **Enhanced Challenge Display**:
@@ -123,7 +123,7 @@
    - `riddle` - Riddles/puzzles with text answers
    - `code` - Coding challenges
    - `qr` - QR code hunts
-   - `trivia` - Trivia questions
+   - `multi_choice` - Multi choice questions
    - `scavenger` - Scavenger hunts
    - `team_activity` - Team activities
    - `decryption` - Decryption challenges
@@ -133,7 +133,7 @@
    - `method: "photo"` - For photo-based challenges
    - `method: "answer"` - For text answer challenges
      - Add `answer: "expected_answer"` field
-     - For trivia: Use comma-separated keywords `answer: "python, java, javascript"`
+     - For multi choice: Use comma-separated keywords `answer: "python, java, javascript"`
 
 4. **Game State**: Existing game state is backward compatible
    - Old format without submission data still works
@@ -183,7 +183,7 @@ Player: /submit 2 keyboard
 Bot: Correct! Team completed: Library Riddle
 ```
 
-**Trivia (Multiple Keywords):**
+**Multi Choice (Multiple Keywords):**
 ```yaml
 verification:
   method: "answer"

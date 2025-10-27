@@ -20,7 +20,7 @@ challenges:
     name: "Capital Cities Challenge"
     description: "Name 5 capital cities from different continents"
     location: "Anywhere"
-    type: "trivia"
+    type: "multi_choice"
     verification:
       method: "answer"
       checklist_items:
@@ -110,7 +110,7 @@ Perfect for challenges like:
 2. **History**: "List 3 inventors from the Industrial Revolution"
 3. **Science**: "Name 4 planets in our solar system"
 4. **Pop Culture**: "Name 5 Marvel superheroes"
-5. **Trivia**: "List 3 programming languages"
+5. **Multi Choice**: "List 3 programming languages"
 6. **Scavenger Hunts**: "Find and name 5 types of trees in the park"
 
 ## Display Examples
@@ -120,7 +120,7 @@ Perfect for challenges like:
 🎯 Your Current Challenge
 
 Challenge #5: Capital Cities Challenge
-❓ Type: trivia
+❓ Type: multi_choice
 📍 Location: Anywhere
 📝 Name 5 capital cities from different continents
 
