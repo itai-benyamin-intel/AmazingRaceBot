@@ -26,13 +26,13 @@ class MockBot:
             'photo': '📷',
             'riddle': '🧩',
             'code': '💻',
-            'qr': '📱',
             'trivia': '❓',
             'location': '📍',
             'text': '📝',
             'scavenger': '🔍',
             'team_activity': '🤝',
-            'decryption': '🔐'
+            'decryption': '🔐',
+            'tournament': '🏆'
         }
         return type_emojis.get(challenge_type, '🎯')
     
@@ -83,14 +83,14 @@ class MockBot:
                 return "📝 Reply with your answer."
             elif challenge_type == 'decryption':
                 return "🔓 Reply with the decrypted message."
-            elif challenge_type == 'qr':
-                return "📱 Reply with the text from the QR code."
             else:
                 return "📝 Reply with your answer."
         elif method == 'location':
             return "📍 You need to be at the correct location."
         elif method == 'auto':
             return "✅ This challenge is auto-verified."
+        elif method == 'tournament':
+            return "🏆 Admin will report tournament results."
         else:
             return "📝 Submit your response to complete this challenge."
 
@@ -133,17 +133,6 @@ class TestChallengeTypes(unittest.TestCase):
                     'method': 'answer',
                     'answer': 'python, java, javascript'
                 }
-            },
-            {
-                'id': 4,
-                'name': 'QR Hunt',
-                'description': 'Find the QR code',
-                'location': 'Main Hall',
-                'type': 'qr',
-                'verification': {
-                    'method': 'answer',
-                    'answer': 'SECRET_CODE_123'
-                }
             }
         ]
         
@@ -161,8 +150,8 @@ class TestChallengeTypes(unittest.TestCase):
         self.assertEqual(self.bot.get_challenge_type_emoji('photo'), '📷')
         self.assertEqual(self.bot.get_challenge_type_emoji('riddle'), '🧩')
         self.assertEqual(self.bot.get_challenge_type_emoji('code'), '💻')
-        self.assertEqual(self.bot.get_challenge_type_emoji('qr'), '📱')
         self.assertEqual(self.bot.get_challenge_type_emoji('trivia'), '❓')
+        self.assertEqual(self.bot.get_challenge_type_emoji('tournament'), '🏆')
         self.assertEqual(self.bot.get_challenge_type_emoji('unknown'), '🎯')
     
     def test_verify_answer_exact_match(self):
@@ -284,11 +273,10 @@ class TestChallengeTypes(unittest.TestCase):
         """Test that challenges have types."""
         challenges = self.test_challenges
         
-        self.assertEqual(len(challenges), 4)
+        self.assertEqual(len(challenges), 3)
         self.assertEqual(challenges[0]['type'], 'photo')
         self.assertEqual(challenges[1]['type'], 'riddle')
         self.assertEqual(challenges[2]['type'], 'trivia')
-        self.assertEqual(challenges[3]['type'], 'qr')
     
     def test_challenge_verification_config(self):
         """Test that verification config is structured correctly."""

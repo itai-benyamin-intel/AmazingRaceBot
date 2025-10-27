@@ -32,20 +32,21 @@ The bot supports various challenge types with different verification methods:
    - Supports multiple acceptable answers (e.g., different output formats)
    - Can use simple keyword matching for function names
    
-4. **📱 QR Hunt Challenge**: Teams find and scan QR codes
-   - Verification: Text answer from QR code
-   
-5. **❓ Trivia Challenge**: Teams answer questions
+4. **❓ Trivia Challenge**: Teams answer questions
    - Verification: Text answer (supports multiple keywords)
    
-6. **🔍 Scavenger Hunt**: Teams find and document items
+5. **🔍 Scavenger Hunt**: Teams find and document items
    - Verification: Photo submission
    
-7. **🤝 Team Activity**: Teams perform activities together
+6. **🤝 Team Activity**: Teams perform activities together
    - Verification: Photo/video submission
    
-8. **🔐 Decryption Challenge**: Teams decrypt encoded messages
+7. **🔐 Decryption Challenge**: Teams decrypt encoded messages
    - Verification: Text answer
+   
+8. **🏆 Tournament Challenge**: Teams compete in bracket-style tournaments
+   - Verification: Admin reports match results
+   - Supports automatic bracket generation and bye handling
 
 ### Verification Methods
 
@@ -359,7 +360,7 @@ game:
       name: "Challenge Name"
       description: "What teams need to do"
       location: "Where to go"
-      type: "photo"  # Challenge type (photo, riddle, code, qr, trivia, etc.)
+      type: "photo"  # Challenge type (photo, riddle, code, trivia, tournament, etc.)
       verification:
         method: "photo"  # Verification method (photo or answer)
       hints:  # Optional: up to 3 hints per challenge
@@ -430,7 +431,7 @@ game:
 - **name**: Display name of the challenge
 - **description**: Instructions for the challenge
 - **location**: Where the challenge takes place
-- **type**: Challenge type (photo, riddle, code, qr, trivia, scavenger, team_activity, decryption, text)
+- **type**: Challenge type (photo, riddle, code, trivia, scavenger, team_activity, decryption, tournament, text)
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
   - **answer**: (for answer method) Expected answer or comma-separated keywords (for trivia)

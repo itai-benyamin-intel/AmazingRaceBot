@@ -82,13 +82,13 @@ class AmazingRaceBot:
             'photo': '📷',
             'riddle': '🧩',
             'code': '💻',
-            'qr': '📱',
             'trivia': '❓',
             'location': '📍',
             'text': '📝',
             'scavenger': '🔍',
             'team_activity': '🤝',
-            'decryption': '🔐'
+            'decryption': '🔐',
+            'tournament': '🏆'
         }
         return type_emojis.get(challenge_type, '🎯')
     
@@ -267,14 +267,14 @@ class AmazingRaceBot:
                 return "📝 Reply with your answer."
             elif challenge_type == 'decryption':
                 return "🔓 Reply with the decrypted message."
-            elif challenge_type == 'qr':
-                return "📱 Reply with the text from the QR code."
             else:
                 return "📝 Reply with your answer."
         elif method == 'location':
             return "📍 You need to be at the correct location."
         elif method == 'auto':
             return "✅ This challenge is auto-verified."
+        elif method == 'tournament':
+            return "🏆 Admin will report tournament results."
         else:
             return "📝 Submit your response to complete this challenge."
     
