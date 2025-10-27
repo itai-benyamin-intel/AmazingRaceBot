@@ -235,6 +235,35 @@ class TestTournament(unittest.TestCase):
         self.assertTrue(new_game_state.is_tournament_complete(1))
         last_place = new_game_state.get_tournament_last_place(1)
         self.assertIsNotNone(last_place)
+    
+    def test_single_team_tournament(self):
+        """Test creating a tournament with only one team."""
+        teams = ["Alpha"]
+        success = self.game_state.create_tournament(1, teams, "Solo Tournament")
+        
+        # Should succeed with single team
+        self.assertTrue(success)
+        
+        tournament = self.game_state.get_tournament(1)
+        self.assertIsNotNone(tournament)
+        
+        # Tournament should be automatically complete
+        self.assertEqual(tournament['status'], 'complete')
+        
+        # Should have a single match with bye status
+        bracket = tournament['bracket']
+        self.assertEqual(len(bracket), 1)
+        self.assertEqual(len(bracket[0]), 1)
+        self.assertEqual(bracket[0][0]['status'], 'bye')
+        self.assertEqual(bracket[0][0]['winner'], 'Alpha')
+        
+        # Alpha should be the winner in rankings
+        rankings = tournament.get('rankings', [])
+        self.assertEqual(len(rankings), 1)
+        self.assertEqual(rankings[0], "Alpha")
+        
+        # Tournament should be marked as complete
+        self.assertTrue(self.game_state.is_tournament_complete(1))
 
 
 if __name__ == '__main__':
