@@ -140,17 +140,18 @@ class TestTournamentBroadcast(unittest.IsolatedAsyncioTestCase):
         # Verify the broadcast contains information about the next challenge (Challenge 3)
         broadcast_messages = [call[1]['text'] for call in calls]
         
-        # Count how many messages mention "Challenge #3" or "New Challenge Available"
+        # Count how many messages mention "New Challenge Available" (the broadcast header)
         next_challenge_broadcasts = [msg for msg in broadcast_messages 
-                                     if "Challenge #3" in msg or "New Challenge Available" in msg]
+                                     if "New Challenge Available" in msg]
         
         # Should have at least 4 broadcasts (one per team member)
         self.assertGreaterEqual(len(next_challenge_broadcasts), 4,
                                "Should broadcast next challenge to all team members")
         
-        # Verify Challenge 3 is mentioned in broadcasts
+        # Verify Challenge 3 is mentioned in the broadcasts
         for msg in next_challenge_broadcasts:
-            self.assertIn("Challenge 3", msg, "Broadcast should mention Challenge 3")
+            self.assertIn("Challenge #3", msg, "Broadcast should mention Challenge #3")
+            self.assertIn("Challenge 3", msg, "Broadcast should include challenge name")
     
     async def test_tournament_completion_with_finished_team(self):
         """Test that tournament completion does not broadcast to teams that finished all challenges."""
