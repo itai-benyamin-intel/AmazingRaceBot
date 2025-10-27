@@ -304,7 +304,9 @@ class AmazingRaceBot:
             return False
         
         # Check if there was a timeout that may have expired
-        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+        # Pass the previous challenge config for custom penalty support
+        previous_challenge = self.challenges[current_challenge_index - 1]
+        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id, previous_challenge)
         if not unlock_time_str:
             return False
         
@@ -411,7 +413,8 @@ class AmazingRaceBot:
         if hints:
             broadcast_message += f"💡 Hints available: {len(hints)}\n"
             if len(used_hints) < len(hints):
-                broadcast_message += "Use /hint to get a hint (costs 2 min penalty)\n"
+                penalty_minutes = self.game_state.get_penalty_minutes_per_hint(challenge)
+                broadcast_message += f"Use /hint to get a hint (costs {penalty_minutes} min penalty)\n"
         
         broadcast_message += "\nUse /current to see full details.\nUse /submit [answer] to submit this challenge."
         
@@ -595,7 +598,7 @@ class AmazingRaceBot:
                 "Use `/submit [answer]` for text answers\n"
                 "Use `/submit` for photo challenges\n\n"
                 "💡 *Need help?*\n"
-                "Use `/hint` to get a hint (costs 2 min penalty)\n\n"
+                "Use `/hint` to get a hint (costs penalty, default 2 min)\n\n"
                 "📋 Use the menu button below to see all available commands."
             )
         
@@ -645,7 +648,7 @@ class AmazingRaceBot:
                 "Use `/submit [answer]` for text answers\n"
                 "Use `/submit` for photo challenges\n\n"
                 "💡 *Need help?*\n"
-                "Use `/hint` to get a hint (costs 2 min penalty)\n\n"
+                "Use `/hint` to get a hint (costs penalty, default 2 min)\n\n"
                 "📋 Use the menu button below to see all available commands."
             )
         
@@ -834,7 +837,8 @@ class AmazingRaceBot:
             challenge_id = current_challenge['id']
             
             if current_challenge_index > 0:  # Not the first challenge
-                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+                previous_challenge = self.challenges[current_challenge_index - 1]
+                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id, previous_challenge)
                 if unlock_time_str:
                     unlock_time = datetime.fromisoformat(unlock_time_str)
                     now = datetime.now()
@@ -953,7 +957,8 @@ class AmazingRaceBot:
         is_locked = False
         penalty_info = None
         if current_challenge_index > 0:  # Not the first challenge
-            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+            previous_challenge = self.challenges[current_challenge_index - 1]
+            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id, previous_challenge)
             if unlock_time_str:
                 unlock_time = datetime.fromisoformat(unlock_time_str)
                 now = datetime.now()
@@ -1032,7 +1037,8 @@ class AmazingRaceBot:
                             message += f"  • {hints[hint_idx]}\n"
                 
                 if len(used_hints) < len(hints):
-                    message += "\nUse /hint to get a hint (costs 2 min penalty)\n"
+                    penalty_minutes = self.game_state.get_penalty_minutes_per_hint(challenge)
+                    message += f"\nUse /hint to get a hint (costs {penalty_minutes} min penalty)\n"
             
             message += "\nUse /submit [answer] to submit this challenge."
         
@@ -1247,7 +1253,8 @@ class AmazingRaceBot:
         
         # Check if challenge is still locked due to penalty
         if current_challenge_index > 0:  # Not the first challenge
-            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id)
+            previous_challenge = self.challenges[current_challenge_index - 1]
+            unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id, previous_challenge)
             if unlock_time_str:
                 unlock_time = datetime.fromisoformat(unlock_time_str)
                 now = datetime.now()
@@ -1363,11 +1370,12 @@ class AmazingRaceBot:
                     if not team.get('finish_time'):
                         # Check if there's a penalty for the next challenge
                         next_challenge_id = challenge_id + 1
-                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
                         if unlock_time_str:
                             unlock_time = datetime.fromisoformat(unlock_time_str)
                             hint_count = self.game_state.get_hint_count(team_name, challenge_id)
-                            penalty_minutes = hint_count * 2
+                            penalty_minutes_per_hint = self.game_state.get_penalty_minutes_per_hint(challenge)
+                            penalty_minutes = hint_count * penalty_minutes_per_hint
                             penalty_info = {
                                 'hint_count': hint_count,
                                 'penalty_minutes': penalty_minutes,
@@ -1393,7 +1401,7 @@ class AmazingRaceBot:
                     # After completion message is sent, broadcast next challenge if no timeout
                     if not team.get('finish_time'):
                         next_challenge_id = challenge_id + 1
-                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
                         if not unlock_time_str:
                             # No timeout - broadcast next challenge to all team members (excluding submitter)
                             await self.broadcast_current_challenge(context, team_name, user.id)
@@ -1495,7 +1503,7 @@ class AmazingRaceBot:
             "• `/current` - View your current challenge\n"
             "• `/submit [answer]` - Submit your answer\n"
             "• `/challenges` - See all challenges progress\n"
-            "• `/hint` - Get a hint (2 min penalty)\n"
+            "• `/hint` - Get a hint (penalty, default 2 min)\n"
             "• `/myteam` - View your team info\n\n"
             "Good luck! 🎯"
         )
@@ -2141,9 +2149,10 @@ class AmazingRaceBot:
                 
                 # Check if there's a penalty for the next challenge
                 has_timeout = False
+                challenge = self.challenges[challenge_id - 1]
                 if not team.get('finish_time'):
                     next_challenge_id = challenge_id + 1
-                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
                     has_timeout = unlock_time_str is not None
                 
                 # Notify submitter that photo was approved
@@ -2167,7 +2176,6 @@ class AmazingRaceBot:
                     )
                     
                     # Send custom success message if configured
-                    challenge = self.challenges[challenge_id - 1]
                     await self.send_success_message_if_configured(challenge, user_id, context=context)
                 except Exception as e:
                     logger.error(f"Failed to notify submitter {user_id}: {e}")
@@ -2179,11 +2187,12 @@ class AmazingRaceBot:
                 if not team.get('finish_time'):
                     # Check for hint penalty
                     next_challenge_id = challenge_id + 1
-                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id)
+                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
                     if unlock_time_str:
                         unlock_time = datetime.fromisoformat(unlock_time_str)
                         hint_count = self.game_state.get_hint_count(team_name, challenge_id)
-                        penalty_minutes = hint_count * 2
+                        penalty_minutes_per_hint = self.game_state.get_penalty_minutes_per_hint(challenge)
+                        penalty_minutes = hint_count * penalty_minutes_per_hint
                         penalty_info = {
                             'hint_count': hint_count,
                             'penalty_minutes': penalty_minutes,
