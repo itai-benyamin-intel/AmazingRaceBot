@@ -42,11 +42,15 @@ game:
       verification:
         method: "photo"
       # Optional: Hints (up to 3 hints per challenge)
-      # Each hint costs 2 minutes penalty when the next challenge is unlocked
+      # Each hint costs a penalty (default 2 minutes) when the next challenge is unlocked
+      # Use timeout_penalty_minutes to customize the penalty per hint for this challenge
       hints:
         - "Look for the tallest building in the area"
         - "The viewpoint is near the waterfront"
         - "Check the tourist information center for directions"
+      # Optional: Custom timeout penalty per hint in minutes (default: 2)
+      # This affects how long teams must wait before the next challenge unlocks
+      # timeout_penalty_minutes: 2
       # Optional: Custom success message shown after completing the challenge
       # This message is sent in addition to the standard completion confirmation
       success_message: "🎉 Great job finding the landmark! Head to the library for your next challenge."
@@ -66,6 +70,8 @@ game:
       hints:
         - "Think about where students study"
         - "It's a building full of books"
+      # Optional: Custom timeout penalty (3 minutes for this challenge instead of default 2)
+      timeout_penalty_minutes: 3
       success_message: "🧩 Excellent! The library it is. Your next challenge involves some coding skills!"
       
     - id: 3

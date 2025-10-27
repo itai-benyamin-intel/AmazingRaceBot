@@ -6,6 +6,9 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 
+# Default penalty per hint in minutes
+DEFAULT_PENALTY_MINUTES = 2
+
 
 class GameState:
     """Manages the state of the Amazing Race game."""
@@ -472,18 +475,38 @@ class GameState:
         """
         return len(self.get_used_hints(team_name, challenge_id))
     
-    def get_total_penalty_time(self, team_name: str, challenge_id: int) -> int:
+    def get_total_penalty_time(self, team_name: str, challenge_id: int, challenge: Optional[dict] = None) -> int:
         """Get total penalty time in seconds for hints used on a challenge.
         
         Args:
             team_name: Name of the team
             challenge_id: ID of the challenge
+            challenge: Optional challenge configuration dict with timeout_penalty_minutes
             
         Returns:
-            Total penalty time in seconds (2 minutes per hint)
+            Total penalty time in seconds (default: 2 minutes per hint, or custom if specified)
         """
         hint_count = self.get_hint_count(team_name, challenge_id)
-        return hint_count * 120  # 2 minutes = 120 seconds per hint
+        
+        # Get penalty minutes from challenge config, use module constant for default
+        penalty_minutes = DEFAULT_PENALTY_MINUTES
+        if challenge and 'timeout_penalty_minutes' in challenge:
+            penalty_minutes = challenge['timeout_penalty_minutes']
+        
+        return hint_count * (penalty_minutes * 60)  # Convert minutes to seconds
+    
+    def get_penalty_minutes_per_hint(self, challenge: Optional[dict] = None) -> int:
+        """Get the penalty minutes per hint for a challenge.
+        
+        Args:
+            challenge: Optional challenge configuration dict with timeout_penalty_minutes
+            
+        Returns:
+            Penalty minutes per hint (default: 2, or custom if specified)
+        """
+        if challenge and 'timeout_penalty_minutes' in challenge:
+            return challenge['timeout_penalty_minutes']
+        return DEFAULT_PENALTY_MINUTES
     
     def set_challenge_completion_time(self, team_name: str, challenge_id: int) -> None:
         """Set the completion time for a challenge (used for penalty timing).
@@ -501,12 +524,13 @@ class GameState:
         self.teams[team_name]['challenge_completion_times'][str(challenge_id)] = datetime.now().isoformat()
         self.save_state()
     
-    def get_challenge_unlock_time(self, team_name: str, challenge_id: int) -> Optional[str]:
+    def get_challenge_unlock_time(self, team_name: str, challenge_id: int, previous_challenge: Optional[dict] = None) -> Optional[str]:
         """Get the time when a challenge will be unlocked (after penalty).
         
         Args:
             team_name: Name of the team
             challenge_id: ID of the challenge (the one being unlocked)
+            previous_challenge: Optional previous challenge configuration dict
             
         Returns:
             ISO format timestamp when challenge unlocks, or None if no penalty
@@ -527,7 +551,7 @@ class GameState:
             return None
         
         # Get penalty time for previous challenge
-        penalty_seconds = self.get_total_penalty_time(team_name, previous_challenge_id)
+        penalty_seconds = self.get_total_penalty_time(team_name, previous_challenge_id, previous_challenge)
         
         if penalty_seconds == 0:
             return None
