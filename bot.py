@@ -2592,6 +2592,13 @@ class AmazingRaceBot:
                 self.game_state.complete_challenge(last_place, challenge_id, len(self.challenges))
                 # The penalty is handled by the hint system (timeout_penalty_minutes)
                 # We'll set a completion time offset to simulate the penalty
+            
+            # Broadcast the next challenge to all teams
+            for team_name in tournament['teams']:
+                team_data = self.game_state.teams.get(team_name)
+                if team_data and not team_data.get('finish_time'):
+                    # Only broadcast if team hasn't finished all challenges
+                    await self.broadcast_current_challenge(context, team_name)
         else:
             # Show next round matches
             current_matches = self.game_state.get_current_round_matches(challenge_id)
