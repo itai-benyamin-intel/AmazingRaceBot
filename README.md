@@ -32,7 +32,7 @@ The bot supports various challenge types with different verification methods:
    - Supports multiple acceptable answers (e.g., different output formats)
    - Can use simple keyword matching for function names
    
-4. **❓ Trivia Challenge**: Teams answer questions
+4. **❓ Multi Choice Challenge**: Teams answer questions
    - Verification: Text answer (supports multiple keywords)
    
 5. **🔍 Scavenger Hunt**: Teams find and document items
@@ -54,7 +54,7 @@ The bot supports various challenge types with different verification methods:
 - **Answer**: Text answer is automatically verified against configured answer(s)
   - Supports exact match or keyword matching
   - Case-insensitive comparison
-  - For trivia: supports multiple required keywords (comma-separated)
+  - For multi choice: supports multiple required keywords (comma-separated)
   - For code challenges: supports multiple acceptable answers (any one matches)
   - **Checklist Mode**: Allows progressive submission of list items
     - Teams can submit items one at a time or all at once
@@ -291,7 +291,7 @@ challenges:
 
 **Use Cases:**
 - **Location-based challenges**: Set `requires_photo_verification: true` for challenges at specific locations
-- **Trivia/puzzle challenges**: Set `requires_photo_verification: false` for challenges that can be completed anywhere
+- **Multi choice/puzzle challenges**: Set `requires_photo_verification: false` for challenges that can be completed anywhere
 - **Mixed race format**: Combine both types for a dynamic race experience
 
 ### For Teams
@@ -366,7 +366,7 @@ game:
       name: "Challenge Name"
       description: "What teams need to do"
       location: "Where to go"
-      type: "photo"  # Challenge type (photo, riddle, code, trivia, tournament, etc.)
+      type: "photo"  # Challenge type (photo, riddle, code, multi_choice, tournament, etc.)
       verification:
         method: "photo"  # Verification method (photo or answer)
       hints:  # Optional: up to 3 hints per challenge
@@ -404,10 +404,10 @@ game:
           - "answer is 5"
     
     - id: 4
-      name: "Trivia Challenge"
+      name: "Multi Choice Challenge"
       description: "Name three programming languages"
       location: "Anywhere"
-      type: "trivia"
+      type: "multi_choice"
       verification:
         method: "answer"
         answer: "python, java, javascript"  # Comma-separated for multiple keywords
@@ -417,7 +417,7 @@ game:
       name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
-      type: "trivia"
+      type: "multi_choice"
       verification:
         method: "answer"
         # Checklist mode: participants can submit items one at a time or all at once
@@ -437,10 +437,10 @@ game:
 - **name**: Display name of the challenge
 - **description**: Instructions for the challenge
 - **location**: Where the challenge takes place
-- **type**: Challenge type (photo, riddle, code, trivia, scavenger, team_activity, decryption, tournament, text)
+- **type**: Challenge type (photo, riddle, code, multi_choice, scavenger, team_activity, decryption, tournament, text)
 - **verification**: Verification configuration
   - **method**: "photo" or "answer"
-  - **answer**: (for answer method) Expected answer or comma-separated keywords (for trivia)
+  - **answer**: (for answer method) Expected answer or comma-separated keywords (for multi choice)
   - **acceptable_answers**: (for answer method) List of acceptable answers - any one matches (for code challenges)
   - **checklist_items**: (for answer method) List of items that can be submitted individually
     - Enables progressive answering - teams can submit items one at a time
@@ -479,7 +479,7 @@ Checklist challenges allow teams to submit answers progressively instead of all 
   name: "Programming Languages"
   description: "Name 3 popular programming languages"
   location: "Anywhere"
-  type: "trivia"
+  type: "multi_choice"
   verification:
     method: "answer"
     checklist_items:
@@ -534,7 +534,7 @@ AmazingRaceBot/
 - Different challenge types support different submission methods:
   - **Photo challenges**: Submit photos which are sent to admin for approval
   - **Answer challenges**: Submit text answers which are auto-verified
-  - **Trivia challenges**: Support multiple required keywords
+  - **Multi choice challenges**: Support multiple required keywords
 - Challenge instructions are displayed based on the challenge type
 - **Challenge Completion Broadcast**: When a team completes a challenge:
   - All team members receive a notification (except the submitter)

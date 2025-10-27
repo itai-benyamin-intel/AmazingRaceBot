@@ -48,7 +48,7 @@ Bot:  ✅ Team 'Team Alpha' created successfully!
 Answer verification was already case-insensitive (implemented in `verify_answer` method):
 - Both expected and user answers are converted to lowercase
 - Works for exact matches and keyword searches
-- Applies to all challenge types (riddle, trivia, code, etc.)
+- Applies to all challenge types (riddle, multi_choice, code, etc.)
 
 **Example:**
 - Expected answer: `keyboard`

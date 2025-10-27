@@ -51,7 +51,7 @@ class TestAnswerFormatValidation(unittest.IsolatedAsyncioTestCase):
                         'name': 'Another Text Challenge',
                         'description': 'Answer a question',
                         'location': 'Library',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {
                             'method': 'answer',
                             'answer': 'python'

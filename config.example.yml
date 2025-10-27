@@ -16,7 +16,7 @@ game:
   # - photo: Teams submit photos (e.g., team photo at location, completed puzzle)
   # - riddle: Teams solve riddles/puzzles and submit text answer
   # - code: Teams write/debug code and submit solution
-  # - trivia: Teams answer trivia questions
+  # - multi_choice: Teams answer multi choice questions
   # - text: General text submission challenge
   # - scavenger: Teams find and document items (via photos)
   # - team_activity: Teams perform activities (verified by photo/video)
@@ -97,14 +97,14 @@ game:
           - "answer is 5" # In a sentence
         # Alternative: use a single answer keyword that must appear
         # answer: "fibonacci"
-      # This challenge doesn't require location verification (trivia/puzzle-based)
+      # This challenge doesn't require location verification (multi_choice/puzzle-based)
       requires_photo_verification: false
       
     - id: 4
-      name: "Tech Trivia"
+      name: "Tech Multi Choice"
       description: "Name three inventors who contributed to the development of the modern computer (comma-separated)"
       location: "Anywhere"
-      type: "trivia"
+      type: "multi_choice"
       verification:
         method: "answer"
         answer: "turing, lovelace, babbage"  # Accept if contains these names
@@ -113,7 +113,7 @@ game:
       name: "Capital Cities Checklist"
       description: "Name 5 capital cities from different continents"
       location: "Anywhere"
-      type: "trivia"
+      type: "multi_choice"
       verification:
         method: "answer"
         # Checklist mode: participants can submit items one at a time or all at once

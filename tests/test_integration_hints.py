@@ -49,7 +49,7 @@ def test_bot_initialization_with_hints():
                     'name': 'Test Challenge 3 (no hints)',
                     'description': 'Test description 3',
                     'location': 'Test location 3',
-                    'type': 'trivia',
+                    'type': 'multi_choice',
                     'verification': {'method': 'answer', 'answer': 'test'}
                     # No hints field - should work fine
                 }

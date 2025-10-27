@@ -32,7 +32,7 @@ class TestChecklistFeature(unittest.IsolatedAsyncioTestCase):
                         'name': 'Capital Cities',
                         'description': 'Name 5 capital cities',
                         'location': 'Anywhere',
-                        'type': 'trivia',
+                        'type': 'multi_choice',
                         'verification': {
                             'method': 'answer',
                             'checklist_items': [

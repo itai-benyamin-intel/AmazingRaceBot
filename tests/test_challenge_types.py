@@ -26,7 +26,7 @@ class MockBot:
             'photo': '📷',
             'riddle': '🧩',
             'code': '💻',
-            'trivia': '❓',
+            'multi_choice': '❓',
             'location': '📍',
             'text': '📝',
             'scavenger': '🔍',
@@ -57,9 +57,9 @@ class MockBot:
         
         expected_answer = verification.get('answer', '').lower().strip()
         
-        # Check if the expected answer is a comma-separated list (for trivia)
+        # Check if the expected answer is a comma-separated list (for multi_choice)
         if ',' in expected_answer:
-            # For trivia with multiple answers, check if user answer contains all required keywords
+            # For multi_choice with multiple answers, check if user answer contains all required keywords
             required_keywords = [kw.strip() for kw in expected_answer.split(',')]
             return all(keyword in user_answer for keyword in required_keywords)
         else:
@@ -79,7 +79,7 @@ class MockBot:
                 return "💡 Reply with your answer to this riddle."
             elif challenge_type == 'code':
                 return "💻 Reply with your code solution or the result."
-            elif challenge_type == 'trivia':
+            elif challenge_type == 'multi_choice':
                 return "📝 Reply with your answer."
             elif challenge_type == 'decryption':
                 return "🔓 Reply with the decrypted message."
@@ -125,10 +125,10 @@ class TestChallengeTypes(unittest.TestCase):
             },
             {
                 'id': 3,
-                'name': 'Trivia Challenge',
+                'name': 'Multi Choice Challenge',
                 'description': 'Name three programming languages',
                 'location': 'Anywhere',
-                'type': 'trivia',
+                'type': 'multi_choice',
                 'verification': {
                     'method': 'answer',
                     'answer': 'python, java, javascript'
@@ -150,7 +150,7 @@ class TestChallengeTypes(unittest.TestCase):
         self.assertEqual(self.bot.get_challenge_type_emoji('photo'), '📷')
         self.assertEqual(self.bot.get_challenge_type_emoji('riddle'), '🧩')
         self.assertEqual(self.bot.get_challenge_type_emoji('code'), '💻')
-        self.assertEqual(self.bot.get_challenge_type_emoji('trivia'), '❓')
+        self.assertEqual(self.bot.get_challenge_type_emoji('multi_choice'), '❓')
         self.assertEqual(self.bot.get_challenge_type_emoji('tournament'), '🏆')
         self.assertEqual(self.bot.get_challenge_type_emoji('unknown'), '🎯')
     
@@ -178,8 +178,8 @@ class TestChallengeTypes(unittest.TestCase):
         # Should accept if answer contains the keyword
         self.assertTrue(self.bot.verify_answer(challenge, 'the answer is keyboard'))
     
-    def test_verify_answer_trivia_multiple(self):
-        """Test trivia with multiple required keywords."""
+    def test_verify_answer_multi_choice_multiple(self):
+        """Test multi_choice with multiple required keywords."""
         challenge = {
             'verification': {
                 'method': 'answer',
@@ -230,10 +230,10 @@ class TestChallengeTypes(unittest.TestCase):
         instructions = self.bot.get_challenge_instructions(challenge)
         self.assertIn('code', instructions.lower())
     
-    def test_get_challenge_instructions_trivia(self):
-        """Test instructions for trivia challenges."""
+    def test_get_challenge_instructions_multi_choice(self):
+        """Test instructions for multi_choice challenges."""
         challenge = {
-            'type': 'trivia',
+            'type': 'multi_choice',
             'verification': {'method': 'answer'}
         }
         instructions = self.bot.get_challenge_instructions(challenge)
@@ -276,7 +276,7 @@ class TestChallengeTypes(unittest.TestCase):
         self.assertEqual(len(challenges), 3)
         self.assertEqual(challenges[0]['type'], 'photo')
         self.assertEqual(challenges[1]['type'], 'riddle')
-        self.assertEqual(challenges[2]['type'], 'trivia')
+        self.assertEqual(challenges[2]['type'], 'multi_choice')
     
     def test_challenge_verification_config(self):
         """Test that verification config is structured correctly."""
@@ -289,7 +289,7 @@ class TestChallengeTypes(unittest.TestCase):
         self.assertEqual(challenges[1]['verification']['method'], 'answer')
         self.assertEqual(challenges[1]['verification']['answer'], 'keyboard')
         
-        # Trivia challenge
+        # Multi Choice challenge
         self.assertEqual(challenges[2]['verification']['method'], 'answer')
         self.assertEqual(challenges[2]['verification']['answer'], 'python, java, javascript')
     
