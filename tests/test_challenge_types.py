@@ -66,13 +66,17 @@ class MockBot:
             # For single answer, check exact match or if expected answer is in user answer
             return expected_answer == user_answer or expected_answer in user_answer
     
-    def get_challenge_instructions(self, challenge: dict) -> str:
+    def get_challenge_instructions(self, challenge: dict, team_name: str = None) -> str:
         """Get submission instructions based on challenge type."""
         verification = challenge.get('verification', {})
         method = verification.get('method', 'photo')
         
         if method == 'photo':
-            return "📷 Submit a photo to complete this challenge."
+            photos_required = verification.get('photos_required', 1)
+            if photos_required > 1:
+                return f"📷 Submit {photos_required} photos to complete this challenge."
+            else:
+                return "📷 Submit a photo to complete this challenge."
         elif method == 'answer':
             challenge_type = challenge.get('type', 'text')
             if challenge_type == 'riddle':
@@ -211,6 +215,18 @@ class TestChallengeTypes(unittest.TestCase):
         }
         instructions = self.bot.get_challenge_instructions(challenge)
         self.assertIn('photo', instructions.lower())
+    
+    def test_get_challenge_instructions_photo_multiple(self):
+        """Test instructions for photo challenges with multiple photos required."""
+        challenge = {
+            'type': 'scavenger',
+            'verification': {
+                'method': 'photo',
+                'photos_required': 5
+            }
+        }
+        instructions = self.bot.get_challenge_instructions(challenge)
+        self.assertIn('5 photos', instructions.lower())
     
     def test_get_challenge_instructions_riddle(self):
         """Test instructions for riddle challenges."""

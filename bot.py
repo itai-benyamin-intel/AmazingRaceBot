@@ -243,11 +243,12 @@ class AmazingRaceBot:
                 f"Please check the challenge instructions and try again."
             )
     
-    def get_challenge_instructions(self, challenge: dict) -> str:
+    def get_challenge_instructions(self, challenge: dict, team_name: str = None) -> str:
         """Get submission instructions based on challenge type.
         
         Args:
             challenge: Challenge configuration
+            team_name: Optional team name for tracking photo submissions
             
         Returns:
             Instruction text for how to submit the challenge
@@ -256,7 +257,16 @@ class AmazingRaceBot:
         method = verification.get('method', 'photo')
         
         if method == 'photo':
-            return "📷 Submit a photo to complete this challenge."
+            photos_required = verification.get('photos_required', 1)
+            if photos_required > 1:
+                # Get current count if team_name provided
+                if team_name:
+                    current_count = self.game_state.get_photo_submission_count(team_name, challenge['id'])
+                    return f"📷 Submit {photos_required} photos to complete this challenge. ({current_count}/{photos_required} submitted)"
+                else:
+                    return f"📷 Submit {photos_required} photos to complete this challenge."
+            else:
+                return "📷 Submit a photo to complete this challenge."
         elif method == 'answer':
             challenge_type = challenge.get('type', 'text')
             if challenge_type == 'riddle':
@@ -394,7 +404,7 @@ class AmazingRaceBot:
         
         challenge_type = challenge.get('type', 'text')
         type_emoji = self.get_challenge_type_emoji(challenge_type)
-        instructions = self.get_challenge_instructions(challenge)
+        instructions = self.get_challenge_instructions(challenge, team_name)
         
         # Create broadcast message
         broadcast_message = (
@@ -951,7 +961,7 @@ class AmazingRaceBot:
         
         challenge_type = challenge.get('type', 'text')
         type_emoji = self.get_challenge_type_emoji(challenge_type)
-        instructions = self.get_challenge_instructions(challenge)
+        instructions = self.get_challenge_instructions(challenge, team_name)
         
         # Check if this is a tournament challenge and initialize if needed
         verification_method = challenge.get('verification', {}).get('method')
@@ -2234,26 +2244,41 @@ class AmazingRaceBot:
         
         team_name = submission['team_name']
         challenge_id = submission['challenge_id']
-        challenge_name = self.challenges[challenge_id - 1]['name']
+        challenge = self.challenges[challenge_id - 1]
+        challenge_name = challenge['name']
         user_id = submission['user_id']
         user_name = submission['user_name']
         
+        # Get photos_required from challenge verification config
+        verification = challenge.get('verification', {})
+        photos_required = verification.get('photos_required', 1)
+        
         if action == 'approve':
             # Approve the submission
-            if self.game_state.approve_photo_submission(submission_id, len(self.challenges)):
+            if self.game_state.approve_photo_submission(submission_id, len(self.challenges), photos_required):
                 team = self.game_state.teams[team_name]
                 completed = len(team['completed_challenges'])
                 total = len(self.challenges)
                 
-                # Update admin message
+                # Get current photo count
+                current_photo_count = self.game_state.get_photo_submission_count(team_name, challenge_id)
+                challenge_completed = current_photo_count >= photos_required
+                
+                # Update admin message with photo count info
+                if photos_required > 1:
+                    approval_msg = f"\n\n✅ *APPROVED* ({current_photo_count}/{photos_required} photos)"
+                    if challenge_completed:
+                        approval_msg += " - Challenge Complete! ✅"
+                else:
+                    approval_msg = "\n\n✅ *APPROVED*"
+                
                 await query.edit_message_caption(
-                    caption=query.message.caption + "\n\n✅ *APPROVED*",
+                    caption=query.message.caption + approval_msg,
                     parse_mode='Markdown'
                 )
                 
                 # Check if there's a penalty for the next challenge
                 has_timeout = False
-                challenge = self.challenges[challenge_id - 1]
                 if not team.get('finish_time'):
                     next_challenge_id = challenge_id + 1
                     unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
@@ -2261,14 +2286,28 @@ class AmazingRaceBot:
                 
                 # Notify submitter that photo was approved
                 try:
-                    response = (
-                        f"✅ *Photo Approved!*\n\n"
-                        f"Your photo for *{challenge_name}* has been approved!\n"
-                        f"Progress: {completed}/{total} challenges"
-                    )
+                    if challenge_completed:
+                        # Challenge is complete
+                        response = (
+                            f"✅ *Photo Approved!*\n\n"
+                            f"Your photo for *{challenge_name}* has been approved!\n"
+                        )
+                        
+                        if photos_required > 1:
+                            response += f"📷 All {photos_required} photos submitted!\n\n"
+                        
+                        response += f"Progress: {completed}/{total} challenges"
+                    else:
+                        # More photos needed
+                        response = (
+                            f"✅ *Photo Approved!*\n\n"
+                            f"Your photo for *{challenge_name}* has been approved!\n"
+                            f"📷 Photos submitted: {current_photo_count}/{photos_required}\n\n"
+                            f"⚠️ Please submit {photos_required - current_photo_count} more photo(s) to complete this challenge."
+                        )
                     
-                    # Check if team finished
-                    if team.get('finish_time'):
+                    # Check if team finished (only if challenge is complete)
+                    if challenge_completed and team.get('finish_time'):
                         response += f"\n\n🏆 *CONGRATULATIONS!* 🏆\n"
                         response += f"Your team finished the race!\n"
                         response += f"Finish time: {team['finish_time']}"
@@ -2279,49 +2318,53 @@ class AmazingRaceBot:
                         parse_mode='Markdown'
                     )
                     
-                    # Send custom success message if configured
-                    await self.send_success_message_if_configured(challenge, user_id, context=context)
+                    # Send custom success message if configured (only if challenge is complete)
+                    if challenge_completed:
+                        await self.send_success_message_if_configured(challenge, user_id, context=context)
                 except Exception as e:
                     logger.error(f"Failed to notify submitter {user_id}: {e}")
                 
-                # Prepare penalty information for broadcast
-                penalty_info = None
-                photo_verification_needed = False
-                
-                if not team.get('finish_time'):
-                    # Check for hint penalty
-                    next_challenge_id = challenge_id + 1
-                    unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
-                    if unlock_time_str:
-                        unlock_time = datetime.fromisoformat(unlock_time_str)
-                        hint_count = self.game_state.get_hint_count(team_name, challenge_id)
-                        penalty_minutes_per_hint = self.game_state.get_penalty_minutes_per_hint(challenge)
-                        penalty_minutes = hint_count * penalty_minutes_per_hint
-                        penalty_info = {
-                            'hint_count': hint_count,
-                            'penalty_minutes': penalty_minutes,
-                            'unlock_time': unlock_time
-                        }
+                # Only broadcast and prepare for next challenge if this challenge is complete
+                if challenge_completed:
+                    # Prepare penalty information for broadcast
+                    penalty_info = None
+                    photo_verification_needed = False
                     
-                    # Check if photo verification is needed for next challenge
-                    if next_challenge_id <= len(self.challenges):
-                        next_challenge_index = team.get('current_challenge_index', 0)
-                        next_challenge = self.challenges[next_challenge_index]
-                        if self.requires_photo_verification(next_challenge, next_challenge_index):
-                            photo_verifications = team.get('photo_verifications', {})
-                            if str(next_challenge_id) not in photo_verifications:
-                                photo_verification_needed = True
-                
-                # Broadcast completion to team and admin (excluding submitter)
-                await self.broadcast_challenge_completion(
-                    context, team_name, challenge_id, challenge_name,
-                    user_id, user_name, completed, total,
-                    penalty_info, photo_verification_needed
-                )
-                
-                # After completion message is sent, broadcast next challenge if no timeout
-                if not has_timeout and not team.get('finish_time'):
-                    await self.broadcast_current_challenge(context, team_name, user_id)
+                    if not team.get('finish_time'):
+                        # Check for hint penalty
+                        next_challenge_id = challenge_id + 1
+                        unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, next_challenge_id, challenge)
+                        if unlock_time_str:
+                            unlock_time = datetime.fromisoformat(unlock_time_str)
+                            hint_count = self.game_state.get_hint_count(team_name, challenge_id)
+                            penalty_minutes_per_hint = self.game_state.get_penalty_minutes_per_hint(challenge)
+                            penalty_minutes = hint_count * penalty_minutes_per_hint
+                            penalty_info = {
+                                'hint_count': hint_count,
+                                'penalty_minutes': penalty_minutes,
+                                'unlock_time': unlock_time
+                            }
+                        
+                        # Check if photo verification is needed for next challenge
+                        if next_challenge_id <= len(self.challenges):
+                            next_challenge_index = team.get('current_challenge_index', 0)
+                            next_challenge = self.challenges[next_challenge_index]
+                            if self.requires_photo_verification(next_challenge, next_challenge_index):
+                                photo_verifications = team.get('photo_verifications', {})
+                                if str(next_challenge_id) not in photo_verifications:
+                                    photo_verification_needed = True
+                    
+                    # Broadcast completion to team and admin (excluding submitter)
+                    await self.broadcast_challenge_completion(
+                        context, team_name, challenge_id, challenge_name,
+                        user_id, user_name, completed, total,
+                        penalty_info, photo_verification_needed
+                    )
+                    
+                    # After completion message is sent, broadcast next challenge if no timeout
+                    # Only do this if the challenge is complete
+                    if not has_timeout and not team.get('finish_time'):
+                        await self.broadcast_current_challenge(context, team_name, user_id)
             else:
                 await query.edit_message_caption(
                     caption=query.message.caption + "\n\n❌ Failed to approve submission.",

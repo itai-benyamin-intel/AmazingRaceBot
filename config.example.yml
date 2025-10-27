@@ -26,6 +26,9 @@ game:
   # Verification Methods:
   # - answer: Text answer that must match (case-insensitive, trimmed)
   # - photo: Requires photo submission (manual admin verification)
+  #   - photos_required: Optional number of photos required (default: 1)
+  #     Teams see a counter showing progress (e.g., "2/5 photos submitted")
+  #     Challenge completes only when all required photos are approved
   # - tournament: Admin reports match results to determine winners
   #
   # Photo Verification for Location Arrival:
@@ -143,6 +146,7 @@ game:
       type: "scavenger"
       verification:
         method: "photo"
+        photos_required: 5  # Require 5 photos to complete this challenge
       
     - id: 8
       name: "Secret Message"
