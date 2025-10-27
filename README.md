@@ -155,6 +155,7 @@ The bot will start and be ready to receive commands!
 - `/tournamentwin <challenge_id> <team_name>` - Report match winner in active tournament
 - `/tournamentstatus <challenge_id>` - View current tournament bracket and status
 - `/tournamentreset <challenge_id>` - Reset a tournament (if needed)
+- **Note**: If only one team reaches a tournament challenge, they automatically win by default
 
 ## Game Flow
 

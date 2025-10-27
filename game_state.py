@@ -773,6 +773,14 @@ class GameState:
             'status': 'active'
         }
         
+        # Check if tournament should auto-complete (single team or all byes in first round)
+        if len(bracket) > 0:
+            first_round = bracket[0]
+            all_complete = all(m['status'] in ['complete', 'bye'] for m in first_round)
+            if all_complete:
+                # Auto-advance if all first round matches are already complete/bye
+                self._advance_round(challenge_id)
+        
         self.save_state()
         return True
     

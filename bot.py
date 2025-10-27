@@ -964,39 +964,64 @@ class AmazingRaceBot:
                     if data.get('current_challenge_index', 0) >= current_challenge_index
                 ]
                 
-                if len(eligible_teams) >= 2:
+                if len(eligible_teams) >= 1:
                     tournament_config = challenge.get('tournament', {})
                     game_name = tournament_config.get('game_name', 'Tournament')
                     
                     self.game_state.create_tournament(challenge_id, eligible_teams, game_name)
+                    tournament = self.game_state.get_tournament(challenge_id)
+                    
+                    # If tournament auto-completed, complete the challenge for the winning team(s)
+                    if tournament and tournament['status'] == 'complete':
+                        # Get the tournament winner(s) from rankings
+                        rankings = tournament.get('rankings', [])
+                        if rankings:
+                            # Complete challenge for the winner (first in rankings)
+                            winner = rankings[0]
+                            self.game_state.complete_challenge(winner, challenge_id, len(self.challenges))
                     
                     # Notify admin that tournament is ready
                     if self.admin_id:
                         try:
-                            tournament = self.game_state.get_tournament(challenge_id)
-                            first_round = self.game_state.get_current_round_matches(challenge_id)
-                            
-                            admin_msg = (
-                                f"🏆 *Tournament Started!*\n\n"
-                                f"Challenge: {challenge['name']}\n"
-                                f"Game: {game_name}\n"
-                                f"Teams: {len(eligible_teams)}\n\n"
-                                f"📋 *First Round Matches:*\n\n"
-                            )
-                            
-                            for i, match in enumerate(first_round):
-                                if match['status'] == 'pending':
-                                    admin_msg += f"{i+1}. {match['team1']} vs {match['team2']}\n"
-                                elif match['status'] == 'bye':
-                                    admin_msg += f"{i+1}. {match['team1']} (bye)\n"
-                            
-                            admin_msg += f"\nUse `/tournamentwin {challenge_id} <team_name>` to report winners."
-                            
-                            await context.bot.send_message(
-                                chat_id=self.admin_id,
-                                text=admin_msg,
-                                parse_mode='Markdown'
-                            )
+                            # Only notify admin if tournament needs admin action
+                            if tournament and tournament['status'] == 'active':
+                                first_round = self.game_state.get_current_round_matches(challenge_id)
+                                admin_msg = (
+                                    f"🏆 *Tournament Started!*\n\n"
+                                    f"Challenge: {challenge['name']}\n"
+                                    f"Game: {game_name}\n"
+                                    f"Teams: {len(eligible_teams)}\n\n"
+                                    f"📋 *First Round Matches:*\n\n"
+                                )
+                                
+                                for i, match in enumerate(first_round):
+                                    if match['status'] == 'pending':
+                                        admin_msg += f"{i+1}. {match['team1']} vs {match['team2']}\n"
+                                    elif match['status'] == 'bye':
+                                        admin_msg += f"{i+1}. {match['team1']} (bye)\n"
+                                
+                                admin_msg += f"\nUse `/tournamentwin {challenge_id} <team_name>` to report winners."
+                                
+                                await context.bot.send_message(
+                                    chat_id=self.admin_id,
+                                    text=admin_msg,
+                                    parse_mode='Markdown'
+                                )
+                            elif tournament and tournament['status'] == 'complete' and len(eligible_teams) == 1:
+                                # Notify admin that single team auto-won
+                                admin_msg = (
+                                    f"🏆 *Tournament Auto-Completed!*\n\n"
+                                    f"Challenge: {challenge['name']}\n"
+                                    f"Game: {game_name}\n"
+                                    f"Only one team ({eligible_teams[0]}) reached this challenge.\n"
+                                    f"They automatically win by default."
+                                )
+                                
+                                await context.bot.send_message(
+                                    chat_id=self.admin_id,
+                                    text=admin_msg,
+                                    parse_mode='Markdown'
+                                )
                         except Exception as e:
                             logger.error(f"Failed to notify admin of tournament start: {e}")
         
