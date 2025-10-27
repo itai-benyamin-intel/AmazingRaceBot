@@ -152,6 +152,18 @@ game:
       verification:
         method: "answer"
         answer: "congratulations"
+    
+    # Example tournament challenge (optional - for advanced events)
+    # - id: 9
+    #   name: "Team Championship"
+    #   description: "Teams will compete in a tournament-style rock-paper-scissors championship"
+    #   location: "Arena"
+    #   type: "tournament"
+    #   verification:
+    #     method: "tournament"
+    #   tournament:
+    #     game_name: "Rock Paper Scissors"
+    #     timeout_minutes: 5  # Penalty timeout for last-place team (optional, default: 5)
 
 # Admin user (Telegram user ID)
 # Note: Only one admin is allowed
