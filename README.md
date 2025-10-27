@@ -51,6 +51,10 @@ The bot supports various challenge types with different verification methods:
 ### Verification Methods
 
 - **Photo**: Teams submit a photo which is sent to admin for approval
+  - **Multiple Photos**: Use `photos_required` to require multiple photo submissions
+    - Teams see a progress counter (e.g., "2/5 photos submitted")
+    - Challenge completes only when all required photos are approved
+    - Perfect for scavenger hunts where teams need to find multiple items
 - **Answer**: Text answer is automatically verified against configured answer(s)
   - Supports exact match or keyword matching
   - Case-insensitive comparison
@@ -447,6 +451,10 @@ game:
     - Each item is tracked independently
     - Challenge completes when all items are submitted
     - Items are matched case-insensitively using substring matching
+  - **photos_required**: (for photo method) Number of photos required to complete the challenge (default: 1)
+    - Teams see a progress counter showing submitted/required photos
+    - Challenge completes only when all required photos are approved
+    - Perfect for scavenger hunt challenges requiring multiple items
 - **requires_photo_verification**: (optional) Boolean to control photo verification for this challenge
   - `true` - Requires photo verification regardless of global setting
   - `false` - Does NOT require photo verification regardless of global setting

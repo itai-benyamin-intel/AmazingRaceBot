@@ -605,12 +605,13 @@ class GameState:
         return {k: v for k, v in self.pending_photo_submissions.items() 
                 if v.get('status') == 'pending'}
     
-    def approve_photo_submission(self, submission_id: str, total_challenges: int) -> bool:
-        """Approve a photo submission and complete the challenge.
+    def approve_photo_submission(self, submission_id: str, total_challenges: int, photos_required: int = 1) -> bool:
+        """Approve a photo submission and optionally complete the challenge.
         
         Args:
             submission_id: ID of the submission to approve
             total_challenges: Total number of challenges in the game
+            photos_required: Number of photos required for this challenge (default: 1)
             
         Returns:
             True if successful, False otherwise
@@ -622,24 +623,38 @@ class GameState:
         team_name = submission['team_name']
         challenge_id = submission['challenge_id']
         
-        # Complete the challenge
-        submission_data = {
-            'type': 'photo',
-            'photo_id': submission['photo_id'],
-            'timestamp': submission['timestamp'],
-            'submitted_by': submission['user_id'],
-            'user_name': submission['user_name'],
-            'team_name': team_name,
-            'status': 'approved'
-        }
+        # Mark submission as approved first
+        self.pending_photo_submissions[submission_id]['status'] = 'approved'
         
-        if self.complete_challenge(team_name, challenge_id, total_challenges, submission_data):
-            # Mark submission as approved
-            self.pending_photo_submissions[submission_id]['status'] = 'approved'
+        # Increment the photo submission count
+        self.increment_photo_submission_count(team_name, challenge_id)
+        
+        # Get the current count
+        current_count = self.get_photo_submission_count(team_name, challenge_id)
+        
+        # Only complete the challenge if required number of photos is reached
+        if current_count >= photos_required:
+            # Complete the challenge
+            submission_data = {
+                'type': 'photo',
+                'photo_id': submission['photo_id'],
+                'timestamp': submission['timestamp'],
+                'submitted_by': submission['user_id'],
+                'user_name': submission['user_name'],
+                'team_name': team_name,
+                'status': 'approved',
+                'photo_count': current_count
+            }
+            
+            if self.complete_challenge(team_name, challenge_id, total_challenges, submission_data):
+                self.save_state()
+                return True
+            
+            return False
+        else:
+            # Photo approved but challenge not yet complete
             self.save_state()
             return True
-        
-        return False
     
     def reject_photo_submission(self, submission_id: str) -> bool:
         """Reject a photo submission.
@@ -737,6 +752,49 @@ class GameState:
             if not progress.get(item, False):
                 return False
         
+        return True
+    
+    def get_photo_submission_count(self, team_name: str, challenge_id: int) -> int:
+        """Get the number of approved photos submitted for a challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            Number of approved photos submitted for this challenge
+        """
+        if team_name not in self.teams:
+            return 0
+        
+        team_data = self.teams[team_name]
+        photo_counts = team_data.get('photo_submission_counts', {})
+        return photo_counts.get(str(challenge_id), 0)
+    
+    def increment_photo_submission_count(self, team_name: str, challenge_id: int) -> bool:
+        """Increment the photo submission count for a team's challenge.
+        
+        Args:
+            team_name: Name of the team
+            challenge_id: ID of the challenge
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if team_name not in self.teams:
+            return False
+        
+        team_data = self.teams[team_name]
+        
+        # Initialize photo_submission_counts if it doesn't exist
+        if 'photo_submission_counts' not in team_data:
+            team_data['photo_submission_counts'] = {}
+        
+        challenge_key = str(challenge_id)
+        current_count = team_data['photo_submission_counts'].get(challenge_key, 0)
+        team_data['photo_submission_counts'][challenge_key] = current_count + 1
+        
+        self.save_state()
         return True
     
     def create_tournament(self, challenge_id: int, team_names: List[str], game_name: str = "Tournament") -> bool:
