@@ -26,6 +26,13 @@ game:
   # Verification Methods:
   # - answer: Text answer that must match (case-insensitive, trimmed)
   # - photo: Requires photo submission (manual admin verification)
+  #
+  # Photo Verification for Location Arrival:
+  # - requires_photo_verification: Optional boolean field per challenge
+  #   - When true: Teams must send a location photo before viewing challenge details
+  #   - When false: Teams can view challenge details without photo verification
+  #   - When omitted: Uses global photo_verification_enabled setting (for challenges 2+)
+  #   - Note: Challenge 1 never requires photo verification regardless of settings
   challenges:
     - id: 1
       name: "Find the Landmark"
@@ -52,6 +59,10 @@ game:
       verification:
         method: "answer"
         answer: "library"
+      # Optional: Require photo verification before revealing this challenge
+      # When true, teams must send a location photo before seeing challenge details
+      # When false or omitted, uses global photo_verification_enabled setting
+      requires_photo_verification: true
       hints:
         - "Think about where students study"
         - "It's a building full of books"
@@ -79,6 +90,8 @@ game:
           - "answer is 5" # In a sentence
         # Alternative: use a single answer keyword that must appear
         # answer: "fibonacci"
+      # This challenge doesn't require location verification (trivia/puzzle-based)
+      requires_photo_verification: false
       
     - id: 4
       name: "QR Hunt"

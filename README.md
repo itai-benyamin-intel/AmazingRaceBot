@@ -238,20 +238,58 @@ Teams should consider:
 
 ## Photo Verification for Location Arrival
 
-The bot supports optional photo verification for challenges 2 onwards. When enabled, teams must send a photo of their team at the challenge location before the challenge details are revealed. This ensures teams physically arrive at each location before knowing what they need to do.
+The bot supports optional photo verification for challenges. You can configure photo verification globally (for all challenges 2+) or per-challenge. When required, teams must send a photo of their team at the challenge location before the challenge details are revealed. This ensures teams physically arrive at each location before knowing what they need to do.
 
 ### How It Works
 
-1. **Enable/Disable**: Admin can toggle photo verification using `/togglephotoverify`
-2. **Challenge Progression**: Team completes Challenge 1 and moves to Challenge 2
-3. **Photo Required**: Before Challenge 2 details are shown, team must send a photo
+1. **Configuration**: Set photo verification globally with `/togglephotoverify` or per-challenge in `config.yml`
+2. **Challenge Progression**: Team completes a challenge and moves to the next one
+3. **Photo Required** (if configured): Before challenge details are shown, team must send a photo
 4. **Admin Approval**: Admin reviews the photo and approves/rejects it
 5. **Challenge Revealed**: Once approved, the full challenge details are revealed to all team members
 6. **Timeout Starts**: The penalty timeout (from hints) only starts after photo approval
 
+### Per-Challenge Configuration
+
+You can specify whether photo verification is required for each individual challenge in `config.yml`:
+
+```yaml
+challenges:
+  - id: 1
+    name: "Find the Landmark"
+    # Challenge 1 never requires photo verification
+    # ...
+  
+  - id: 2
+    name: "Visit the Library"
+    requires_photo_verification: true  # Explicitly requires photo
+    # ...
+  
+  - id: 3
+    name: "Solve the Riddle"
+    requires_photo_verification: false  # Explicitly does NOT require photo
+    # ...
+  
+  - id: 4
+    name: "Find the Statue"
+    # No field specified - uses global photo_verification_enabled setting
+    # ...
+```
+
+**Configuration Options:**
+- `requires_photo_verification: true` - Challenge requires photo verification regardless of global setting
+- `requires_photo_verification: false` - Challenge does NOT require photo verification regardless of global setting
+- Field omitted - Challenge uses global `photo_verification_enabled` setting (for challenges 2+)
+- Challenge 1 never requires photo verification
+
+**Use Cases:**
+- **Location-based challenges**: Set `requires_photo_verification: true` for challenges at specific locations
+- **Trivia/puzzle challenges**: Set `requires_photo_verification: false` for challenges that can be completed anywhere
+- **Mixed race format**: Combine both types for a dynamic race experience
+
 ### For Teams
 
-**When you advance to a new challenge (2+):**
+**When you advance to a challenge that requires photo verification:**
 
 1. You'll see a message indicating photo verification is required
 2. Go to the challenge location (only the name and location are shown)
@@ -262,19 +300,22 @@ The bot supports optional photo verification for challenges 2 onwards. When enab
 7. Complete the challenge as normal
 
 **Important Notes:**
-- Only challenges 2 and onwards require photo verification
-- Challenge 1 does not require photo verification (it's the starting point)
+- Challenge 1 never requires photo verification (it's the starting point)
+- Only challenges configured with photo verification will require it
 - Any team member can send the photo
 - The photo must show your team at the location
 - The timeout/penalty timer only starts after the photo is approved
 
 ### For Admins
 
-**Toggle Photo Verification:**
+**Global Toggle:**
 ```
 /togglephotoverify
 ```
-This enables or disables photo verification for all challenges except Challenge 1.
+This enables or disables photo verification globally. Challenges without explicit `requires_photo_verification` settings will follow this global setting.
+
+**Per-Challenge Override:**
+Configure `requires_photo_verification: true` or `false` in `config.yml` for any challenge to override the global setting.
 
 **Approving Photos:**
 When a team sends a location photo:
@@ -294,6 +335,7 @@ When a team sends a location photo:
 - Be clear about why photos are rejected (team can send a new one)
 - Photo verification adds an extra layer of fairness to the race
 - The timeout/penalty timer starts only after you approve the photo
+- Use per-challenge configuration for maximum flexibility
 
 ### Privacy Considerations
 
@@ -398,6 +440,11 @@ game:
     - Each item is tracked independently
     - Challenge completes when all items are submitted
     - Items are matched case-insensitively using substring matching
+- **requires_photo_verification**: (optional) Boolean to control photo verification for this challenge
+  - `true` - Requires photo verification regardless of global setting
+  - `false` - Does NOT require photo verification regardless of global setting
+  - Omitted - Uses global `photo_verification_enabled` setting (for challenges 2+)
+  - Note: Challenge 1 never requires photo verification
 - **hints**: (optional) List of up to 3 hints for the challenge
   - Each hint costs 2 minutes penalty (max 6 minutes total)
   - Hints are revealed sequentially (one at a time)
