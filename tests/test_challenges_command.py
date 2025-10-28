@@ -1,5 +1,5 @@
 """
-Unit tests for the challenges command - testing that locked challenges are hidden.
+Unit tests for the challenges command - testing that descriptions are not shown.
 """
 import unittest
 import os
@@ -92,20 +92,21 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         call_args = update.message.reply_text.call_args
         message = call_args[0][0]
         
-        # Verify completed challenge is shown (brief format)
+        # Verify completed challenge is shown (name only, no description)
         self.assertIn("First Challenge", message)
         self.assertIn("✅", message)
-        self.assertIn("Complete the first task", message)
+        self.assertNotIn("Complete the first task", message)
         
-        # Verify current challenge is shown (brief format)
+        # Verify current challenge is shown (name only, no description)
         self.assertIn("Second Challenge", message)
         self.assertIn("(CURRENT)", message)
-        self.assertIn("Solve the riddle", message)
+        self.assertNotIn("Solve the riddle", message)
         
-        # Verify brief format - should NOT have type, location emoji, or instructions
+        # Verify brief format - should NOT have type, location, description, or instructions
         self.assertNotIn("Type:", message)
         self.assertNotIn("📍 Location:", message)
         self.assertNotIn("ℹ️", message)
+        self.assertNotIn("description", message.lower())
         
         # Verify locked challenges are NOT shown
         self.assertNotIn("Third Challenge", message)
@@ -149,7 +150,7 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         call_args = update.message.reply_text.call_args
         message = call_args[0][0]
         
-        # Verify all challenges are shown as completed (brief format)
+        # Verify all challenges are shown as completed (name only, no description)
         self.assertIn("First Challenge", message)
         self.assertIn("Second Challenge", message)
         self.assertIn("Third Challenge", message)
@@ -158,9 +159,13 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         # Verify all are marked as completed
         self.assertEqual(message.count("✅"), 4)
         
-        # Verify brief format - should NOT have type or location
+        # Verify brief format - should NOT have type, location, or description
         self.assertNotIn("Type:", message)
         self.assertNotIn("📍 Location:", message)
+        self.assertNotIn("Complete the first task", message)
+        self.assertNotIn("Solve the riddle", message)
+        self.assertNotIn("Find the location", message)
+        self.assertNotIn("Final task", message)
         
         # Verify no locked challenges shown
         self.assertNotIn("🔒", message)
@@ -193,12 +198,12 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         call_args = update.message.reply_text.call_args
         message = call_args[0][0]
         
-        # Verify only first challenge is shown as current (brief format)
+        # Verify only first challenge is shown as current (name only, no description)
         self.assertIn("First Challenge", message)
         self.assertIn("(CURRENT)", message)
-        self.assertIn("Complete the first task", message)
+        self.assertNotIn("Complete the first task", message)
         
-        # Verify brief format
+        # Verify brief format - should NOT have type, location, or description
         self.assertNotIn("Type:", message)
         self.assertNotIn("📍 Location:", message)
         
@@ -232,12 +237,13 @@ class TestChallengesCommand(unittest.IsolatedAsyncioTestCase):
         call_args = update.message.reply_text.call_args
         message = call_args[0][0]
         
-        # Verify only first challenge is shown (brief format)
+        # Verify only first challenge is shown (name only, no description)
         self.assertIn("First Challenge", message)
         self.assertIn("(CURRENT)", message)
         
-        # Verify brief format
+        # Verify brief format - should NOT have type, location, or description
         self.assertNotIn("Type:", message)
+        self.assertNotIn("Complete the first task", message)
         
         # Verify other challenges are NOT shown
         self.assertNotIn("Second Challenge", message)
