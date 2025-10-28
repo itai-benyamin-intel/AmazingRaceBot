@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 class AmazingRaceBot:
     """Main bot class for the Amazing Race game."""
     
+    # Challenge types that use photos as their answer and should not require
+    # location verification by default, as the photo IS the challenge itself
+    PHOTO_BASED_CHALLENGE_TYPES = ['multi_choice', 'team_activity', 'photo', 'scavenger']
+    
     def __init__(self, config_file: str = "config.yml"):
         """Initialize the bot with configuration."""
         self.config = self.load_config(config_file)
@@ -207,8 +211,7 @@ class AmazingRaceBot:
         # location verification by default, as the photo IS the challenge itself.
         # This can be overridden with explicit requires_photo_verification: true
         challenge_type = challenge.get('type', '')
-        photo_based_types = ['multi_choice', 'team_activity', 'photo', 'scavenger']
-        if challenge_type in photo_based_types:
+        if challenge_type in self.PHOTO_BASED_CHALLENGE_TYPES:
             return False
         
         # Fall back to global setting for challenges 2+ (backward compatibility)
