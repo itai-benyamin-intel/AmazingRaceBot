@@ -173,8 +173,14 @@ class TestMultiChoiceChallengeFix(unittest.IsolatedAsyncioTestCase):
         challenge3 = bot.challenges[2]
         self.assertTrue(bot.requires_photo_verification(challenge3, 2))
     
-    async def test_photo_challenge_still_requires_verification(self):
-        """Test that photo challenges still require photo verification when enabled."""
+    async def test_photo_challenge_no_location_verification_by_default(self):
+        """Test that photo challenges don't require location verification by default.
+        
+        Photo challenges (like team_activity, scavenger) require a photo submission
+        as the answer itself, not as proof of location arrival. Therefore, they should
+        NOT require location verification by default, even when photo_verification_enabled
+        is True globally.
+        """
         bot = AmazingRaceBot(self.test_config_file)
         
         # Photo verification enabled by default
@@ -182,8 +188,9 @@ class TestMultiChoiceChallengeFix(unittest.IsolatedAsyncioTestCase):
         
         # Test photo challenge (challenge 4)
         challenge4 = bot.challenges[3]
-        # Photo challenges should still honor the global setting since they need location
-        self.assertTrue(bot.requires_photo_verification(challenge4, 3))
+        # Photo challenges should NOT require location verification by default
+        # because the photo IS the challenge itself
+        self.assertFalse(bot.requires_photo_verification(challenge4, 3))
     
     async def test_explicit_requires_photo_verification_overrides(self):
         """Test that explicit requires_photo_verification=True overrides the default 
