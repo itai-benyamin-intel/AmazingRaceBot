@@ -154,12 +154,51 @@ The bot will start and be ready to receive commands!
 - `/approve` - View pending photo submissions (approval via inline buttons)
 - `/reject` - View pending photo submissions (same as `/approve`)
 - `/togglephotoverify` - Enable/disable photo verification for location arrival (challenges 2+)
+- `/pass <team_name>` - Manually advance a team past their current challenge (for exceptional circumstances)
 
 **Tournament Commands** (tournaments auto-created when teams reach tournament challenge):
 - `/tournamentwin <challenge_id> <team_name>` - Report match winner in active tournament
 - `/tournamentstatus <challenge_id>` - View current tournament bracket and status
 - `/tournamentreset <challenge_id>` - Reset a tournament (if needed)
 - **Note**: If only one team reaches a tournament challenge, they automatically win by default
+
+### Admin Pass Command
+
+The `/pass` command allows admins to manually advance a team past their current challenge. This is useful for:
+
+**Use Cases:**
+- Technical difficulties (bot issues, connectivity problems)
+- Exceptional circumstances (location temporarily inaccessible)
+- Manual overrides during live events (challenge deemed too difficult)
+- Handling edge cases or unforeseen situations
+
+**How It Works:**
+1. Admin uses `/pass <team_name>` command
+2. The specified team automatically completes their current challenge
+3. Team is advanced to the next challenge
+4. All team members are notified
+5. Action is logged in audit trail for transparency
+
+**Example:**
+```
+/pass RedTeam
+```
+
+**Features:**
+- ✅ Admin-only authorization
+- ✅ Clear feedback to admin and affected team
+- ✅ Audit logging for accountability
+- ✅ Broadcasts next challenge to team
+- ✅ Works with all challenge types
+- ✅ Respects sequential challenge order
+
+**Audit Trail:**
+Every use of the `/pass` command is logged with:
+- Team name
+- Challenge ID
+- Admin ID and name
+- Timestamp
+- Stored in game state for review
 
 ## Game Flow
 
