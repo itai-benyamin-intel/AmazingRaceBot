@@ -841,11 +841,13 @@ class AmazingRaceBot:
             help_text = (
                 "You're not part of a team yet. Here's how to get started:\n\n"
                 "🆕 *Create a new team:*\n"
-                "Use `/createteam <team_name>` to create a team\n"
-                "Example: `/createteam Awesome Team`\n\n"
+                "Use /createteam <team_name> to create a team\n"
+                "Example: /createteam Awesome Team\n\n"
                 "👥 *Join an existing team:*\n"
-                "Use `/jointeam <team_name>` to join a team\n"
-                "Example: `/jointeam Awesome Team`\n\n"
+                "Use /jointeam <team_name> to join a team\n"
+                "Example: /jointeam Awesome Team\n\n"
+                "🏆 *See existing teams:*\n"
+                "Use /teams to see which teams exist in the race\n\n"
                 "📋 You can also use the menu button below to see all available commands."
             )
         elif not self.game_state.game_started:
@@ -891,11 +893,13 @@ class AmazingRaceBot:
                 "👋 *Welcome to the Amazing Race!*\n\n"
                 "You're not part of a team yet. Here's how to get started:\n\n"
                 "🆕 *Create a new team:*\n"
-                "Use `/createteam <team_name>` to create a team\n"
-                "Example: `/createteam Awesome Team`\n\n"
+                "Use /createteam <team_name> to create a team\n"
+                "Example: /createteam Awesome Team\n\n"
                 "👥 *Join an existing team:*\n"
-                "Use `/jointeam <team_name>` to join a team\n"
-                "Example: `/jointeam Awesome Team`\n\n"
+                "Use /jointeam <team_name> to join a team\n"
+                "Example: /jointeam Awesome Team\n\n"
+                "🏆 *See existing teams:*\n"
+                "Use /teams to see which teams exist in the race\n\n"
                 "📋 You can also use the menu button below to see all available commands."
             )
         elif not self.game_state.game_started:
