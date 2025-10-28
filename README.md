@@ -7,6 +7,7 @@ A Telegram chatbot template for managing an Amazing Race game. This bot allows t
 - 🏁 **Team Management**: Create and join teams
 - 🎯 **Sequential Challenge Tracking**: Teams must complete challenges in order
 - 💡 **Hints System**: Teams can request up to 3 hints per challenge with time penalties
+- 🖼️ **Image Support**: Send images with challenges and hints for visual puzzles and clues
 - 📷 **Challenge Types System**: Support for diverse challenge types with automatic verification
 - 📸 **Photo Verification**: Photo verification for location arrival (challenges 2+) - ensures teams are at locations
 - 🏆 **Leaderboard**: Real-time standings showing progress and finishers
@@ -285,6 +286,69 @@ Teams should consider:
 - **Team coordination**: Any team member can request a hint (all members are notified)
 - **Penalty impact**: 6 minutes total penalty can be significant in a close race
 - **Progressive difficulty**: Hints are revealed one at a time (can't skip to the last hint)
+
+## Image Support
+
+The bot supports sending images with challenges and hints to create more engaging and visually rich gameplay experiences.
+
+### Features
+
+- **Challenge Images**: Include images in challenge questions (e.g., "What landmark is this?")
+- **Hint Images**: Add visual hints that complement text hints
+- **Flexible Sources**: Use remote images (HTTPS URLs) or local images
+- **Security**: Built-in validation prevents security vulnerabilities
+
+### Quick Example
+
+```yaml
+challenges:
+  - id: 1
+    name: "Identify the Landmark"
+    description: "What famous landmark is shown in this image?"
+    location: "Anywhere"
+    type: "riddle"
+    verification:
+      method: "answer"
+      answer: "eiffel tower"
+    # Remote image via HTTPS
+    image_url: "https://example.com/landmark.jpg"
+    # OR local image
+    # image_path: "images/landmark.jpg"
+    hints:
+      - "It's in France"
+      - "Built in 1889"
+    # Images for specific hints
+    hint_images:
+      0: "images/france_map.jpg"      # Image for first hint
+      1: "https://example.com/hint.jpg"  # Image for second hint
+```
+
+### Image Sources
+
+1. **Remote Images (URLs)**: Use HTTPS URLs from image hosting services
+   - Must use HTTPS (HTTP rejected for security)
+   - Example: `https://i.imgur.com/abc123.jpg`
+
+2. **Local Images**: Store images in the `images/` directory
+   - Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`
+   - Example: `images/challenge1.png`
+
+### Security Features
+
+- **HTTPS Only**: Remote images must use HTTPS to prevent security issues
+- **Path Validation**: Local paths validated to prevent directory traversal attacks
+- **Extension Validation**: Only image file types allowed
+- **File Existence Check**: Validates files exist before sending
+
+### Use Cases
+
+- Visual puzzles and riddles
+- Map or diagram challenges
+- Photo identification challenges
+- Progressive visual hints
+- Enhanced gameplay engagement
+
+For complete documentation, see [docs/IMAGE_SUPPORT.md](docs/IMAGE_SUPPORT.md).
 
 ## Photo Verification for Location Arrival
 
