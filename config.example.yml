@@ -30,8 +30,10 @@ game:
   #     Teams see a counter showing progress (e.g., "2/5 photos submitted")
   #     Challenge completes only when all required photos are approved
   # - video: Requires video submission (manual admin verification)
-  #   - Works the same as 'photo' but expects video files
-  #   - Can be combined with requires_photo_verification for location verification
+  #   - Works the same as 'photo' but expects video files for challenge completion
+  #   - Note: If requires_photo_verification is true, teams must still send a PHOTO
+  #     for location verification before the challenge is revealed, then submit the
+  #     VIDEO to complete the challenge itself
   # - tournament: Admin reports match results to determine winners
   #
   # Photo Verification for Location Arrival:
