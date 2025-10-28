@@ -848,18 +848,35 @@ class AmazingRaceBot:
         # Check player state and provide context-aware help
         if not team_name:
             # Player has no team
-            help_text = (
-                "You're not part of a team yet. Here's how to get started:\n\n"
-                "🆕 *Create a new team:*\n"
-                "Use /createteam <team_name> to create a team\n"
-                "Example: /createteam Awesome Team\n\n"
-                "👥 *Join an existing team:*\n"
-                "Use /jointeam <team_name> to join a team\n"
-                "Example: /jointeam Awesome Team\n\n"
-                "🏆 *See existing teams:*\n"
-                "Use /teams to see which teams exist in the race\n\n"
-                "📋 You can also use the menu button below to see all available commands."
-            )
+            if self.game_state.game_started:
+                # Game has started but player has no team
+                help_text = (
+                    "You're not part of a team yet, but the game has already started!\n\n"
+                    "You can still join:\n\n"
+                    "🆕 *Create a new team:*\n"
+                    "Use /createteam <team_name> to create a team\n"
+                    "Example: /createteam Awesome Team\n\n"
+                    "👥 *Join an existing team:*\n"
+                    "Use /jointeam <team_name> to join a team\n"
+                    "Example: /jointeam Awesome Team\n\n"
+                    "🏆 *See existing teams:*\n"
+                    "Use /teams to see which teams exist in the race\n\n"
+                    "📋 You can also use the menu button below to see all available commands."
+                )
+            else:
+                # Game hasn't started and player has no team
+                help_text = (
+                    "You're not part of a team yet. Here's how to get started:\n\n"
+                    "🆕 *Create a new team:*\n"
+                    "Use /createteam <team_name> to create a team\n"
+                    "Example: /createteam Awesome Team\n\n"
+                    "👥 *Join an existing team:*\n"
+                    "Use /jointeam <team_name> to join a team\n"
+                    "Example: /jointeam Awesome Team\n\n"
+                    "🏆 *See existing teams:*\n"
+                    "Use /teams to see which teams exist in the race\n\n"
+                    "📋 You can also use the menu button below to see all available commands."
+                )
         elif not self.game_state.game_started:
             # Player has team but game hasn't started
             help_text = (
@@ -872,7 +889,7 @@ class AmazingRaceBot:
                 "📋 Use the menu button below to see all available commands."
             )
         else:
-            # Game has started
+            # Game has started and player has a team
             help_text = (
                 "🎯 *How to Play*\n\n"
                 "The game is in progress! Here's how to navigate:\n\n"
@@ -899,19 +916,37 @@ class AmazingRaceBot:
         # Check player state and provide context-aware help
         if not team_name:
             # Player has no team
-            help_text = (
-                "👋 *Welcome to the Amazing Race!*\n\n"
-                "You're not part of a team yet. Here's how to get started:\n\n"
-                "🆕 *Create a new team:*\n"
-                "Use /createteam <team_name> to create a team\n"
-                "Example: /createteam Awesome Team\n\n"
-                "👥 *Join an existing team:*\n"
-                "Use /jointeam <team_name> to join a team\n"
-                "Example: /jointeam Awesome Team\n\n"
-                "🏆 *See existing teams:*\n"
-                "Use /teams to see which teams exist in the race\n\n"
-                "📋 You can also use the menu button below to see all available commands."
-            )
+            if self.game_state.game_started:
+                # Game has started but player has no team
+                help_text = (
+                    "👋 *Welcome to the Amazing Race!*\n\n"
+                    "You're not part of a team yet, but the game has already started!\n\n"
+                    "You can still join:\n\n"
+                    "🆕 *Create a new team:*\n"
+                    "Use /createteam <team_name> to create a team\n"
+                    "Example: /createteam Awesome Team\n\n"
+                    "👥 *Join an existing team:*\n"
+                    "Use /jointeam <team_name> to join a team\n"
+                    "Example: /jointeam Awesome Team\n\n"
+                    "🏆 *See existing teams:*\n"
+                    "Use /teams to see which teams exist in the race\n\n"
+                    "📋 You can also use the menu button below to see all available commands."
+                )
+            else:
+                # Game hasn't started and player has no team
+                help_text = (
+                    "👋 *Welcome to the Amazing Race!*\n\n"
+                    "You're not part of a team yet. Here's how to get started:\n\n"
+                    "🆕 *Create a new team:*\n"
+                    "Use /createteam <team_name> to create a team\n"
+                    "Example: /createteam Awesome Team\n\n"
+                    "👥 *Join an existing team:*\n"
+                    "Use /jointeam <team_name> to join a team\n"
+                    "Example: /jointeam Awesome Team\n\n"
+                    "🏆 *See existing teams:*\n"
+                    "Use /teams to see which teams exist in the race\n\n"
+                    "📋 You can also use the menu button below to see all available commands."
+                )
         elif not self.game_state.game_started:
             # Player has team but game hasn't started
             help_text = (
@@ -924,7 +959,7 @@ class AmazingRaceBot:
                 "📋 Use the menu button below to see all available commands."
             )
         else:
-            # Game has started
+            # Game has started and player has a team
             help_text = (
                 "🎯 *How to Play*\n\n"
                 "The game is in progress! Here's how to navigate:\n\n"
