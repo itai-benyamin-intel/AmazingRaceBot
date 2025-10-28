@@ -2471,20 +2471,53 @@ class AmazingRaceBot:
                     parse_mode='Markdown'
                 )
                 
+                # Check if there's an active timeout penalty for this challenge
+                team = self.game_state.teams[team_name]
+                previous_challenge_index = challenge_id - 2  # challenge_id is 1-based, index is 0-based
+                previous_challenge = self.challenges[previous_challenge_index] if previous_challenge_index >= 0 else None
+                unlock_time_str = self.game_state.get_challenge_unlock_time(team_name, challenge_id, previous_challenge)
+                
+                should_broadcast = True
+                timeout_message = ""
+                
+                if unlock_time_str:
+                    unlock_time = datetime.fromisoformat(unlock_time_str)
+                    now = datetime.now()
+                    
+                    if now < unlock_time:
+                        # Timeout is still active - don't broadcast challenge yet
+                        should_broadcast = False
+                        time_remaining = unlock_time - now
+                        minutes = int(time_remaining.total_seconds() / 60)
+                        seconds = int(time_remaining.total_seconds() % 60)
+                        timeout_message = (
+                            f"\n\n⏱️ *Timeout Active*\n"
+                            f"Challenge will be revealed in {minutes}m {seconds}s.\n"
+                            f"Use /current to check when it's available."
+                        )
+                
                 # Broadcast the challenge to all team members (now that photo is approved)
-                await self.broadcast_current_challenge(context, team_name)
+                # Only if timeout has expired or there's no timeout
+                if should_broadcast:
+                    await self.broadcast_current_challenge(context, team_name)
                 
                 # Notify team members that photo was approved
-                team = self.game_state.teams[team_name]
                 team_members = team['members']
                 for member in team_members:
                     try:
-                        response = (
-                            f"✅ *Photo Verified!*\n\n"
-                            f"Your location photo for Challenge #{challenge_id} has been approved!\n\n"
-                            f"The challenge is now revealed. Check your messages above for details.\n"
-                            f"Use /current to see the challenge again."
-                        )
+                        if should_broadcast:
+                            response = (
+                                f"✅ *Photo Verified!*\n\n"
+                                f"Your location photo for Challenge #{challenge_id} has been approved!\n\n"
+                                f"The challenge is now revealed. Check your messages above for details.\n"
+                                f"Use /current to see the challenge again."
+                            )
+                        else:
+                            response = (
+                                f"✅ *Photo Verified!*\n\n"
+                                f"Your location photo for Challenge #{challenge_id} has been approved!"
+                                f"{timeout_message}"
+                            )
                         
                         await context.bot.send_message(
                             chat_id=member['id'],
