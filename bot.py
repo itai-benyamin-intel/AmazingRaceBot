@@ -3225,31 +3225,66 @@ class AmazingRaceBot:
             waiting_command = context.user_data['waiting_for']['command']
             user_input = update.message.text.strip()
             
-            # Clear the waiting state
-            del context.user_data['waiting_for']
-            
             # Route to the appropriate command handler with the text as argument
             if waiting_command == 'createteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 # Simulate command with args
                 context.args = user_input.split()
                 await self.create_team_command(update, context)
                 return
             elif waiting_command == 'jointeam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.join_team_command(update, context)
                 return
             elif waiting_command == 'submit':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 # For submit, we need to call it with the answer
                 context.args = user_input.split()
                 await self.submit_command(update, context)
                 return
             elif waiting_command == 'addteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.addteam_command(update, context)
                 return
             elif waiting_command == 'removeteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.removeteam_command(update, context)
+                return
+            elif waiting_command == 'message':
+                # Handle /message interactive flow - message text received
+                team_name = context.user_data['waiting_for'].get('team_name')
+                # Clear the waiting state
+                del context.user_data['waiting_for']
+                
+                if not team_name:
+                    await update.message.reply_text("❌ Error: Team name not found. Please try again.")
+                    return
+                
+                # Verify team still exists
+                if team_name not in self.game_state.teams:
+                    await update.message.reply_text(f"❌ Team '{team_name}' no longer exists!")
+                    return
+                
+                # Send the message using the same logic as message_command
+                context.args = [team_name] + user_input.split()
+                await self.message_command(update, context)
+                return
+            elif waiting_command == 'broadcast':
+                # Handle /broadcast interactive flow - message text received
+                # Clear the waiting state
+                del context.user_data['waiting_for']
+                
+                # Send the broadcast using the same logic as broadcast_command
+                context.args = user_input.split()
+                await self.broadcast_command(update, context)
                 return
         
         # Check if game is active and user is in a team - treat message as submission
@@ -3296,12 +3331,33 @@ class AmazingRaceBot:
             await update.message.reply_text("Only admins can use the /message command!")
             return
         
+        # Check if no args provided - start interactive flow
+        if not context.args:
+            # Check if there are any teams
+            if not self.game_state.teams:
+                await update.message.reply_text("❌ No teams exist yet!")
+                return
+            
+            # Create inline keyboard with team selection buttons
+            keyboard = []
+            for team_name in sorted(self.game_state.teams.keys()):
+                keyboard.append([InlineKeyboardButton(team_name, callback_data=f"msg_team_{team_name}")])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "📨 *Send Message to Team*\n\n"
+                "Select the team you want to send a message to:",
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+            return
+        
         # Parse command: /message <team_name> <message>
-        if not context.args or len(context.args) < 2:
+        if len(context.args) < 2:
             await update.message.reply_text(
                 "Usage: `/message <team_name> <message>`\n\n"
                 "Example: `/message RedTeam Great job on the last challenge!`\n\n"
-                "This command sends a message to all members of a specific team.",
+                "Or use `/message` without arguments for interactive team selection.",
                 parse_mode='Markdown'
             )
             return
@@ -3360,12 +3416,21 @@ class AmazingRaceBot:
             await update.message.reply_text("Only admins can use the /broadcast command!")
             return
         
-        # Parse command: /broadcast <message>
+        # Check if no args provided - start interactive flow
         if not context.args:
+            # Check if there are any teams
+            if not self.game_state.teams:
+                await update.message.reply_text("❌ No teams exist yet!")
+                return
+            
+            # Store that we're waiting for broadcast message
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'broadcast'
+            
             await update.message.reply_text(
-                "Usage: `/broadcast <message>`\n\n"
-                "Example: `/broadcast Great work everyone! Keep up the pace!`\n\n"
-                "This command sends a message to all members of all teams.",
+                "📢 *Broadcast to All Teams*\n\n"
+                "Please enter the message you want to broadcast to all teams:",
                 parse_mode='Markdown'
             )
             return
@@ -3416,6 +3481,36 @@ class AmazingRaceBot:
         )
         
         await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+    
+    async def message_team_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle team selection callback for /message command."""
+        query = update.callback_query
+        await query.answer()
+        
+        # Parse callback data: msg_team_{team_name}
+        if not query.data.startswith('msg_team_'):
+            await query.edit_message_text("❌ Invalid team selection.")
+            return
+        
+        team_name = query.data.replace('msg_team_', '')
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await query.edit_message_text(f"❌ Team '{team_name}' no longer exists!")
+            return
+        
+        # Store the selected team in user_data and set waiting state
+        if 'waiting_for' not in context.user_data:
+            context.user_data['waiting_for'] = {}
+        context.user_data['waiting_for']['command'] = 'message'
+        context.user_data['waiting_for']['team_name'] = team_name
+        
+        # Update the message to show team selected and ask for message text
+        await query.edit_message_text(
+            f"📨 *Send Message to Team: {team_name}*\n\n"
+            f"Please enter the message you want to send to this team:",
+            parse_mode='Markdown'
+        )
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -3468,6 +3563,10 @@ class AmazingRaceBot:
         application.add_handler(CallbackQueryHandler(
             self.photo_approval_callback_handler, 
             pattern="^(approve|reject)_.*"
+        ))
+        application.add_handler(CallbackQueryHandler(
+            self.message_team_callback_handler,
+            pattern="^msg_team_.*"
         ))
         application.add_handler(CallbackQueryHandler(self.hint_callback_handler))
         

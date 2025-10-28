@@ -73,7 +73,7 @@ class TestMessageCommand(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Only admins", call_args)
     
     async def test_message_command_no_args(self):
-        """Test /message command without arguments shows usage."""
+        """Test /message command without arguments starts interactive flow."""
         update = MagicMock()
         update.effective_user = MagicMock()
         update.effective_user.id = 123456789  # Admin
@@ -85,10 +85,13 @@ class TestMessageCommand(unittest.IsolatedAsyncioTestCase):
         
         await self.bot.message_command(update, context)
         
-        # Verify usage message
+        # Verify interactive flow starts with team selection
         update.message.reply_text.assert_called_once()
         call_args = update.message.reply_text.call_args[0][0]
-        self.assertIn("Usage:", call_args)
+        self.assertIn("Select the team", call_args)
+        # Verify reply_markup is present (keyboard with team buttons)
+        call_kwargs = update.message.reply_text.call_args[1]
+        self.assertIn('reply_markup', call_kwargs)
     
     async def test_message_command_team_not_exist(self):
         """Test /message command with non-existent team."""
@@ -140,6 +143,34 @@ class TestMessageCommand(unittest.IsolatedAsyncioTestCase):
             _, kwargs = call
             self.assertIn("Great job!", kwargs['text'])
             self.assertIn("Message from Admin", kwargs['text'])
+    
+    async def test_message_command_interactive_team_selection(self):
+        """Test /message interactive flow - team selection callback."""
+        # Create a mock callback query for team selection
+        update = MagicMock()
+        update.callback_query = MagicMock()
+        update.callback_query.answer = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock()
+        update.callback_query.data = "msg_team_RedTeam"
+        
+        context = MagicMock()
+        context.user_data = {}
+        
+        await self.bot.message_team_callback_handler(update, context)
+        
+        # Verify team selection was processed
+        update.callback_query.answer.assert_called_once()
+        update.callback_query.edit_message_text.assert_called_once()
+        
+        # Verify waiting state is set correctly
+        self.assertIn('waiting_for', context.user_data)
+        self.assertEqual(context.user_data['waiting_for']['command'], 'message')
+        self.assertEqual(context.user_data['waiting_for']['team_name'], 'RedTeam')
+        
+        # Verify the message asks for the message text
+        call_args = update.callback_query.edit_message_text.call_args[0][0]
+        self.assertIn("RedTeam", call_args)
+        self.assertIn("enter the message", call_args)
 
 
 class TestBroadcastCommand(unittest.IsolatedAsyncioTestCase):
@@ -207,7 +238,7 @@ class TestBroadcastCommand(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Only admins", call_args)
     
     async def test_broadcast_command_no_args(self):
-        """Test /broadcast command without arguments shows usage."""
+        """Test /broadcast command without arguments starts interactive flow."""
         update = MagicMock()
         update.effective_user = MagicMock()
         update.effective_user.id = 123456789  # Admin
@@ -216,13 +247,17 @@ class TestBroadcastCommand(unittest.IsolatedAsyncioTestCase):
         
         context = MagicMock()
         context.args = []
+        context.user_data = {}
         
         await self.bot.broadcast_command(update, context)
         
-        # Verify usage message
+        # Verify interactive flow starts - asking for message
         update.message.reply_text.assert_called_once()
         call_args = update.message.reply_text.call_args[0][0]
-        self.assertIn("Usage:", call_args)
+        self.assertIn("enter the message", call_args)
+        # Verify waiting state is set
+        self.assertIn('waiting_for', context.user_data)
+        self.assertEqual(context.user_data['waiting_for']['command'], 'broadcast')
     
     async def test_broadcast_command_no_teams(self):
         """Test /broadcast command when no teams exist."""
