@@ -3386,13 +3386,11 @@ class AmazingRaceBot:
         
         # Send message to all team members across all teams
         sent_to_users = set()
-        total_members = 0
         success_count = 0
         
         for team_name, team_data in self.game_state.teams.items():
             for member in team_data['members']:
                 member_id = member['id']
-                total_members += 1
                 
                 # Skip if already sent to this user (avoid duplicates if someone is in multiple teams)
                 if member_id in sent_to_users:
