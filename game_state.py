@@ -101,7 +101,8 @@ class GameState:
         return True
     
     def complete_challenge(self, team_name: str, challenge_id: int, total_challenges: int, 
-                          submission_data: Optional[Dict] = None) -> bool:
+                          submission_data: Optional[Dict] = None, 
+                          next_challenge_requires_photo_verification: bool = None) -> bool:
         """Mark a challenge as completed for a team. Challenges must be completed sequentially.
         
         Args:
@@ -109,6 +110,8 @@ class GameState:
             challenge_id: ID of the challenge to complete
             total_challenges: Total number of challenges in the game
             submission_data: Optional data about the submission (e.g., answer, photo_id, timestamp)
+            next_challenge_requires_photo_verification: Whether the next challenge requires photo verification.
+                If None, falls back to global photo_verification_enabled setting (for backward compatibility)
         
         Returns:
             True if challenge was successfully completed, False otherwise
@@ -133,11 +136,20 @@ class GameState:
         self.teams[team_name]['current_challenge_index'] += 1
         
         # Record completion time for penalty tracking
-        # When photo verification is enabled and this is not the last challenge,
+        # When the next challenge requires photo verification and this is not the last challenge,
         # defer setting completion time until photo verification for next challenge is approved
         next_challenge_id = challenge_id + 1
-        should_defer = (self.photo_verification_enabled and 
-                       next_challenge_id <= total_challenges)
+        
+        # Determine if we should defer based on whether next challenge requires photo verification
+        # If next_challenge_requires_photo_verification is explicitly provided, use that
+        # Otherwise fall back to global photo_verification_enabled setting (backward compatibility)
+        if next_challenge_requires_photo_verification is not None:
+            should_defer = (next_challenge_requires_photo_verification and 
+                           next_challenge_id <= total_challenges)
+        else:
+            # Backward compatibility: use global setting
+            should_defer = (self.photo_verification_enabled and 
+                           next_challenge_id <= total_challenges)
         
         if not should_defer:
             # No photo verification OR last challenge - set completion time immediately
@@ -681,13 +693,16 @@ class GameState:
         return {k: v for k, v in self.pending_photo_submissions.items() 
                 if v.get('status') == 'pending'}
     
-    def approve_photo_submission(self, submission_id: str, total_challenges: int, photos_required: int = 1) -> bool:
+    def approve_photo_submission(self, submission_id: str, total_challenges: int, photos_required: int = 1,
+                                next_challenge_requires_photo_verification: bool = None) -> bool:
         """Approve a photo submission and optionally complete the challenge.
         
         Args:
             submission_id: ID of the submission to approve
             total_challenges: Total number of challenges in the game
             photos_required: Number of photos required for this challenge (default: 1)
+            next_challenge_requires_photo_verification: Whether the next challenge requires photo verification.
+                If None, falls back to global photo_verification_enabled setting (for backward compatibility)
             
         Returns:
             True if successful, False otherwise
@@ -722,7 +737,8 @@ class GameState:
                 'photo_count': current_count
             }
             
-            if self.complete_challenge(team_name, challenge_id, total_challenges, submission_data):
+            if self.complete_challenge(team_name, challenge_id, total_challenges, submission_data,
+                                      next_challenge_requires_photo_verification):
                 self.save_state()
                 return True
             
