@@ -156,6 +156,8 @@ The bot will start and be ready to receive commands!
 - `/reject` - View pending photo submissions (same as `/approve`)
 - `/togglephotoverify` - Enable/disable photo verification for location arrival (challenges 2+)
 - `/pass <team_name>` - Manually advance a team past their current challenge (for exceptional circumstances)
+- `/message <team_name> <message>` - Send a message to all members of a specific team
+- `/broadcast <message>` - Send a message to all members of all teams
 
 **Tournament Commands** (tournaments auto-created when teams reach tournament challenge):
 - `/tournamentwin <challenge_id> <team_name>` - Report match winner in active tournament

@@ -3289,6 +3289,136 @@ class AmazingRaceBot:
         
         await update.message.reply_text(response)
     
+    async def message_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /message command (admin only) - send a message to a specific team."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can use the /message command!")
+            return
+        
+        # Parse command: /message <team_name> <message>
+        if not context.args or len(context.args) < 2:
+            await update.message.reply_text(
+                "Usage: `/message <team_name> <message>`\n\n"
+                "Example: `/message RedTeam Great job on the last challenge!`\n\n"
+                "This command sends a message to all members of a specific team.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Extract team name and message
+        team_name = context.args[0]
+        message_text = ' '.join(context.args[1:])
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await update.message.reply_text(f"❌ Team '{team_name}' doesn't exist!")
+            return
+        
+        # Get team data
+        team_data = self.game_state.teams[team_name]
+        
+        # Prepare the message to send to the team
+        team_message = (
+            f"📨 *Message from Admin*\n\n"
+            f"{message_text}"
+        )
+        
+        # Send message to all team members
+        sent_to_users = set()
+        success_count = 0
+        for member in team_data['members']:
+            member_id = member['id']
+            if member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=team_message,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send message to team member {member_id}: {e}")
+        
+        # Send confirmation to admin
+        confirmation_msg = (
+            f"✅ *Message Sent*\n\n"
+            f"Team: {team_name}\n"
+            f"Members notified: {success_count}/{len(team_data['members'])}\n"
+            f"Message: {message_text}"
+        )
+        
+        await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+    
+    async def broadcast_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /broadcast command (admin only) - send a message to all teams."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can use the /broadcast command!")
+            return
+        
+        # Parse command: /broadcast <message>
+        if not context.args:
+            await update.message.reply_text(
+                "Usage: `/broadcast <message>`\n\n"
+                "Example: `/broadcast Great work everyone! Keep up the pace!`\n\n"
+                "This command sends a message to all members of all teams.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Extract message
+        message_text = ' '.join(context.args)
+        
+        # Check if there are any teams
+        if not self.game_state.teams:
+            await update.message.reply_text("❌ No teams exist yet!")
+            return
+        
+        # Prepare the message to broadcast
+        broadcast_message = (
+            f"📢 *Broadcast from Admin*\n\n"
+            f"{message_text}"
+        )
+        
+        # Send message to all team members across all teams
+        sent_to_users = set()
+        total_members = 0
+        success_count = 0
+        
+        for team_name, team_data in self.game_state.teams.items():
+            for member in team_data['members']:
+                member_id = member['id']
+                total_members += 1
+                
+                # Skip if already sent to this user (avoid duplicates if someone is in multiple teams)
+                if member_id in sent_to_users:
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        chat_id=member_id,
+                        text=broadcast_message,
+                        parse_mode='Markdown'
+                    )
+                    sent_to_users.add(member_id)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send broadcast to user {member_id}: {e}")
+        
+        # Send confirmation to admin
+        confirmation_msg = (
+            f"✅ *Broadcast Sent*\n\n"
+            f"Teams: {len(self.game_state.teams)}\n"
+            f"Unique members notified: {success_count}\n"
+            f"Message: {message_text}"
+        )
+        
+        await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+    
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
         logger.error(f"Update {update} caused error {context.error}")
@@ -3329,6 +3459,8 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("tournamentstatus", self.tournamentstatus_command))
         application.add_handler(CommandHandler("tournamentreset", self.tournamentreset_command))
         application.add_handler(CommandHandler("pass", self.pass_command))
+        application.add_handler(CommandHandler("message", self.message_command))
+        application.add_handler(CommandHandler("broadcast", self.broadcast_command))
         
         # Add callback query handlers
         application.add_handler(CallbackQueryHandler(
