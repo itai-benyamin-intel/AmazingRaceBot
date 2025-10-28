@@ -71,9 +71,16 @@ game:
       # When true, teams must send a location photo before seeing challenge details
       # When false or omitted, uses global photo_verification_enabled setting
       requires_photo_verification: true
+      # Optional: Image to send with the challenge (can be URL or local path)
+      # image_url: "https://example.com/riddle_image.jpg"  # Remote image via HTTPS
+      # image_path: "images/riddle_building.png"           # Local image from images/ directory
       hints:
         - "Think about where students study"
         - "It's a building full of books"
+      # Optional: Images for hints (can be mixed with text hints)
+      # hint_images:
+      #   0: "images/hint1.jpg"  # Image for first hint (index 0)
+      #   1: "https://example.com/hint2.jpg"  # Image for second hint (index 1)
       # Optional: Custom timeout penalty (3 minutes for this challenge instead of default 2)
       timeout_penalty_minutes: 3
       success_message: "🧩 Excellent! The library it is. Your next challenge involves some coding skills!"
@@ -150,12 +157,32 @@ game:
       
     - id: 8
       name: "Secret Message"
-      description: "Decode this Caesar cipher (shift 3): Frqjudwxodwlrqv"
+      description: "Decode this Caesar cipher (shift 3): Frqjudwxodwxodwlrqv"
       location: "Anywhere"
       type: "decryption"
       verification:
         method: "answer"
         answer: "congratulations"
+    
+    # Example challenge with image question (image-based challenge)
+    # - id: 9
+    #   name: "Identify the Landmark"
+    #   description: "What famous landmark is shown in this image?"
+    #   location: "Anywhere"
+    #   type: "riddle"
+    #   verification:
+    #     method: "answer"
+    #     answer: "eiffel tower"
+    #   # Image sent with the challenge as the question
+    #   image_url: "https://example.com/landmark.jpg"  # Remote image
+    #   # OR use a local image:
+    #   # image_path: "images/landmark.jpg"
+    #   hints:
+    #     - "This landmark is in France"
+    #     - "It was built for the 1889 World's Fair"
+    #   # Optional: Add images to hints
+    #   hint_images:
+    #     0: "images/france_map.jpg"  # Image for first hint
     
     # Example tournament challenge (optional - for advanced events)
     # Tournament challenges create bracket-style competitions between teams
