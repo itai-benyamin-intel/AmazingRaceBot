@@ -3274,7 +3274,8 @@ class AmazingRaceBot:
                     return
                 
                 # Send the message using the same logic as message_command
-                context.args = [team_name] + user_input.split()
+                # user_input is the full message text, keep it together as one element after team name
+                context.args = [team_name, user_input]
                 await self.message_command(update, context)
                 return
             elif waiting_command == 'broadcast':
@@ -3283,7 +3284,8 @@ class AmazingRaceBot:
                 del context.user_data['waiting_for']
                 
                 # Send the broadcast using the same logic as broadcast_command
-                context.args = user_input.split()
+                # user_input is the full message text, keep it as a single element
+                context.args = [user_input]
                 await self.broadcast_command(update, context)
                 return
         
