@@ -412,6 +412,80 @@ class AmazingRaceBot:
         challenge_type = challenge.get('type', 'text')
         type_emoji = self.get_challenge_type_emoji(challenge_type)
         instructions = self.get_challenge_instructions(challenge, team_name)
+        verification_method = challenge.get('verification', {}).get('method')
+        
+        # Check if this is a tournament challenge and initialize if needed
+        if verification_method == 'tournament':
+            tournament = self.game_state.get_tournament(challenge_id)
+            if not tournament:
+                # Initialize tournament with all teams that have reached this challenge
+                current_challenge_index = team_data.get('current_challenge_index', 0)
+                eligible_teams = [
+                    name for name, data in self.game_state.teams.items()
+                    if data.get('current_challenge_index', 0) >= current_challenge_index
+                ]
+                
+                if len(eligible_teams) > 0:
+                    tournament_config = challenge.get('tournament', {})
+                    game_name = tournament_config.get('game_name', 'Tournament')
+                    
+                    self.game_state.create_tournament(challenge_id, eligible_teams, game_name)
+                    tournament = self.game_state.get_tournament(challenge_id)
+                    
+                    if tournament:
+                        # If tournament auto-completed, complete the challenge for the winning team(s)
+                        if tournament['status'] == 'complete':
+                            # Get the tournament winner(s) from rankings
+                            rankings = tournament.get('rankings', [])
+                            if rankings:
+                                # Complete challenge for the winner (first in rankings)
+                                winner = rankings[0]
+                                self.game_state.complete_challenge(winner, challenge_id, len(self.challenges))
+                        
+                        # Notify admin that tournament is ready (only if needed)
+                        if self.admin_id:
+                            try:
+                                # Only notify admin if tournament needs admin action
+                                if tournament['status'] == 'active':
+                                    first_round = self.game_state.get_current_round_matches(challenge_id)
+                                    admin_msg = (
+                                        f"🏆 *Tournament Started!*\n\n"
+                                        f"Challenge: {challenge['name']}\n"
+                                        f"Game: {game_name}\n"
+                                        f"Teams: {len(eligible_teams)}\n\n"
+                                        f"📋 *First Round Matches:*\n\n"
+                                    )
+                                    
+                                    for i, match in enumerate(first_round):
+                                        if match['status'] == 'pending':
+                                            admin_msg += f"{i+1}. {match['team1']} vs {match['team2']}\n"
+                                        elif match['status'] == 'bye':
+                                            admin_msg += f"{i+1}. {match['team1']} (bye)\n"
+                                    
+                                    admin_msg += f"\nUse `/tournamentwin {challenge_id} <team_name>` to report winners."
+                                    
+                                    await context.bot.send_message(
+                                        chat_id=self.admin_id,
+                                        text=admin_msg,
+                                        parse_mode='Markdown'
+                                    )
+                                elif tournament['status'] == 'complete' and len(eligible_teams) == 1:
+                                    # Notify admin that single team auto-won
+                                    admin_msg = (
+                                        f"🏆 *Tournament Auto-Completed!*\n\n"
+                                        f"Challenge: {challenge['name']}\n"
+                                        f"Game: {game_name}\n"
+                                        f"Only one team ({eligible_teams[0]}) reached this challenge.\n"
+                                        f"They automatically win by default."
+                                    )
+                                    
+                                    await context.bot.send_message(
+                                        chat_id=self.admin_id,
+                                        text=admin_msg,
+                                        parse_mode='Markdown'
+                                    )
+                            except Exception as e:
+                                logger.error(f"Failed to notify admin of tournament start: {e}")
         
         # Create broadcast message
         broadcast_message = (
@@ -423,6 +497,38 @@ class AmazingRaceBot:
             f"ℹ️ {instructions}\n\n"
         )
         
+        # Check if this is a tournament challenge and add match information
+        if verification_method == 'tournament':
+            tournament = self.game_state.get_tournament(challenge_id)
+            if tournament:
+                tournament_config = challenge.get('tournament', {})
+                game_name = tournament_config.get('game_name', 'Tournament')
+                
+                broadcast_message += f"🏆 *Tournament: {game_name}*\n\n"
+                
+                # Show current matches for this team
+                current_matches = self.game_state.get_current_round_matches(challenge_id)
+                team_match = None
+                for match in current_matches:
+                    if match['team1'] == team_name or match['team2'] == team_name:
+                        team_match = match
+                        break
+                
+                if team_match:
+                    if team_match['status'] == 'pending':
+                        if team_match['team2']:
+                            broadcast_message += f"⚔️ Your match: {team_match['team1']} vs {team_match['team2']}\n"
+                        else:
+                            broadcast_message += f"🎫 You have a bye this round\n"
+                        broadcast_message += "Waiting for admin to report results...\n\n"
+                    elif team_match['status'] == 'bye':
+                        broadcast_message += f"🎫 You have a bye and advance automatically\n\n"
+                
+                if tournament['status'] == 'complete':
+                    broadcast_message += "Tournament is complete!\n"
+            else:
+                broadcast_message += "🏆 *Tournament will start when all teams arrive*\n\n"
+        
         # Add hints information
         hints = challenge.get('hints', [])
         used_hints = self.game_state.get_used_hints(team_name, challenge_id)
@@ -433,7 +539,11 @@ class AmazingRaceBot:
                 penalty_minutes = self.game_state.get_penalty_minutes_per_hint(challenge)
                 broadcast_message += f"Use /hint to get a hint (costs {penalty_minutes} min penalty)\n"
         
-        broadcast_message += "\nUse /current to see full details.\nUse /submit [answer] to submit this challenge."
+        # Don't show submit instructions for tournament challenges
+        if verification_method == 'tournament':
+            broadcast_message += "\nUse /current to see your match status."
+        else:
+            broadcast_message += "\nUse /current to see full details.\nUse /submit [answer] to submit this challenge."
         
         # Broadcast to all team members
         sent_to_users = set()
@@ -1161,7 +1271,9 @@ class AmazingRaceBot:
                     penalty_minutes = self.game_state.get_penalty_minutes_per_hint(challenge)
                     message += f"\nUse /hint to get a hint (costs {penalty_minutes} min penalty)\n"
             
-            message += "\nUse /submit [answer] to submit this challenge."
+            # Don't show submit instructions for tournament challenges
+            if verification_method != 'tournament':
+                message += "\nUse /submit [answer] to submit this challenge."
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
@@ -1591,6 +1703,16 @@ class AmazingRaceBot:
                 f"📷 Please send a photo for:\n"
                 f"*{challenge['name']}*\n\n"
                 f"The photo will be reviewed by the admin.",
+                parse_mode='Markdown'
+            )
+        
+        elif method == 'tournament':
+            # Tournament challenges don't accept submissions from teams
+            await update.message.reply_text(
+                f"⚠️ *Submission Not Recognized*\n\n"
+                f"This is a tournament challenge. You cannot submit an answer.\n"
+                f"The admin will report tournament results using `/tournamentwin`.\n\n"
+                f"Use `/current` to see your tournament match status.",
                 parse_mode='Markdown'
             )
         
