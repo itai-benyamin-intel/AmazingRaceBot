@@ -574,7 +574,21 @@ class AmazingRaceBot:
                             if rankings:
                                 # Complete challenge for the winner (first in rankings)
                                 winner = rankings[0]
-                                self.game_state.complete_challenge(winner, challenge_id, len(self.challenges))
+                                
+                                # Determine if next challenge requires photo verification
+                                next_challenge_id = challenge_id + 1
+                                next_challenge_requires_photo_verification = False
+                                if next_challenge_id <= len(self.challenges):
+                                    next_challenge_index = current_challenge_index + 1
+                                    next_challenge = self.challenges[next_challenge_index]
+                                    next_challenge_requires_photo_verification = self.requires_photo_verification(
+                                        next_challenge, next_challenge_index
+                                    )
+                                
+                                self.game_state.complete_challenge(
+                                    winner, challenge_id, len(self.challenges), None,
+                                    next_challenge_requires_photo_verification
+                                )
                         
                         # Notify admin that tournament is ready (only if needed)
                         if self.admin_id:
@@ -1252,7 +1266,21 @@ class AmazingRaceBot:
                         if rankings:
                             # Complete challenge for the winner (first in rankings)
                             winner = rankings[0]
-                            self.game_state.complete_challenge(winner, challenge_id, len(self.challenges))
+                            
+                            # Determine if next challenge requires photo verification
+                            next_challenge_id = challenge_id + 1
+                            next_challenge_requires_photo_verification = False
+                            if next_challenge_id <= len(self.challenges):
+                                next_challenge_index = current_challenge_index + 1
+                                next_challenge = self.challenges[next_challenge_index]
+                                next_challenge_requires_photo_verification = self.requires_photo_verification(
+                                    next_challenge, next_challenge_index
+                                )
+                            
+                            self.game_state.complete_challenge(
+                                winner, challenge_id, len(self.challenges), None,
+                                next_challenge_requires_photo_verification
+                            )
                     
                     # Notify admin that tournament is ready
                     if self.admin_id:
@@ -1778,7 +1806,20 @@ class AmazingRaceBot:
                 if is_checklist:
                     submission_data['checklist_completed'] = True
                 
-                if self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges), submission_data):
+                # Determine if next challenge requires photo verification
+                next_challenge_id = challenge_id + 1
+                next_challenge_requires_photo_verification = False
+                if next_challenge_id <= len(self.challenges):
+                    next_challenge_index = current_challenge_index + 1
+                    next_challenge = self.challenges[next_challenge_index]
+                    next_challenge_requires_photo_verification = self.requires_photo_verification(
+                        next_challenge, next_challenge_index
+                    )
+                
+                if self.game_state.complete_challenge(
+                    team_name, challenge_id, len(self.challenges), submission_data,
+                    next_challenge_requires_photo_verification
+                ):
                     team = self.game_state.teams[team_name]
                     completed = len(team['completed_challenges'])
                     total = len(self.challenges)
@@ -2629,9 +2670,23 @@ class AmazingRaceBot:
         verification = challenge.get('verification', {})
         photos_required = verification.get('photos_required', 1)
         
+        # Determine if next challenge requires photo verification
+        next_challenge_id = challenge_id + 1
+        next_challenge_requires_photo_verification = False
+        if next_challenge_id <= len(self.challenges):
+            current_challenge_index = challenge_id - 1  # challenge_id is 1-based
+            next_challenge_index = current_challenge_index + 1
+            next_challenge = self.challenges[next_challenge_index]
+            next_challenge_requires_photo_verification = self.requires_photo_verification(
+                next_challenge, next_challenge_index
+            )
+        
         if action == 'approve':
             # Approve the submission
-            if self.game_state.approve_photo_submission(submission_id, len(self.challenges), photos_required):
+            if self.game_state.approve_photo_submission(
+                submission_id, len(self.challenges), photos_required,
+                next_challenge_requires_photo_verification
+            ):
                 team = self.game_state.teams[team_name]
                 completed = len(team['completed_challenges'])
                 total = len(self.challenges)
@@ -2958,14 +3013,31 @@ class AmazingRaceBot:
             )
             await update.message.reply_text(completion_msg, parse_mode='Markdown')
             
+            # Determine if next challenge requires photo verification
+            next_challenge_id = challenge_id + 1
+            next_challenge_requires_photo_verification = False
+            if next_challenge_id <= len(self.challenges):
+                current_challenge_index = challenge_id - 1  # challenge_id is 1-based
+                next_challenge_index = current_challenge_index + 1
+                next_challenge = self.challenges[next_challenge_index]
+                next_challenge_requires_photo_verification = self.requires_photo_verification(
+                    next_challenge, next_challenge_index
+                )
+            
             # Complete the challenge for all teams except last place
             for team_name in tournament['teams']:
                 if team_name != last_place:
-                    self.game_state.complete_challenge(team_name, challenge_id, len(self.challenges))
+                    self.game_state.complete_challenge(
+                        team_name, challenge_id, len(self.challenges), None,
+                        next_challenge_requires_photo_verification
+                    )
             
             # Apply timeout penalty to last place team
             if last_place:
-                self.game_state.complete_challenge(last_place, challenge_id, len(self.challenges))
+                self.game_state.complete_challenge(
+                    last_place, challenge_id, len(self.challenges), None,
+                    next_challenge_requires_photo_verification
+                )
                 # The penalty is handled by the hint system (timeout_penalty_minutes)
                 # We'll set a completion time offset to simulate the penalty
             
