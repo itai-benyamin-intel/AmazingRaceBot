@@ -213,9 +213,9 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         
         # Verify that separate photo verification messages are sent
         photo_verif_messages = [(chat_id, text) for chat_id, text in sent_messages if "Photo Verification Required" in text]
-        # Should have 3 photo verification messages (Bob, Charlie, Admin excluded as submitter)
-        # Actually, admin is not on the team, so should be 2 (Bob and Charlie)
-        self.assertGreater(len(photo_verif_messages), 0, "Should send separate photo verification messages")
+        # Should have 2 photo verification messages (Bob and Charlie only)
+        # Alice is excluded as the submitter, and admin is not a team member
+        self.assertEqual(len(photo_verif_messages), 2, "Should send photo verification to Bob and Charlie only")
         
         # Verify the photo verification messages have detailed instructions
         for chat_id, message_text in photo_verif_messages:

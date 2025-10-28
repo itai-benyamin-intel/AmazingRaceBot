@@ -138,9 +138,11 @@ class TestPhotoVerificationBroadcastBug(unittest.IsolatedAsyncioTestCase):
         bob_messages = [call for call in send_message_calls if call.kwargs.get('chat_id') == 222]
         
         # Count how many messages mention "Photo Verification"
+        # Using specific phrase to identify photo verification request messages
         photo_verification_messages = [
             msg for msg in bob_messages 
-            if 'Photo Verification' in msg.kwargs.get('text', '')
+            if 'Photo Verification Required' in msg.kwargs.get('text', '') and
+               'Before you can view this challenge' in msg.kwargs.get('text', '')
         ]
         
         # VERIFY: There should be exactly ONE photo verification message
@@ -158,12 +160,15 @@ class TestPhotoVerificationBroadcastBug(unittest.IsolatedAsyncioTestCase):
                         "Completion message should NOT mention photo verification to avoid duplication")
         
         # VERIFY: The detailed photo verification message exists
+        # Check for multiple key phrases to ensure it's the correct message type
         detailed_verif_messages = [
             msg for msg in bob_messages 
-            if 'Before you can view this challenge' in msg.kwargs.get('text', '')
+            if 'Photo Verification Required' in msg.kwargs.get('text', '') and
+               'Before you can view this challenge' in msg.kwargs.get('text', '') and
+               'Send the photo to this bot' in msg.kwargs.get('text', '')
         ]
         self.assertEqual(len(detailed_verif_messages), 1, 
-                        "Should have one detailed photo verification message")
+                        "Should have one detailed photo verification message with full instructions")
 
 
 if __name__ == '__main__':
