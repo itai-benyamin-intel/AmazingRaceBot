@@ -194,14 +194,18 @@ class TestChecklistFeature(unittest.IsolatedAsyncioTestCase):
         # Call current command
         await bot.current_challenge_command(update, context)
         
-        # Check that checklist is displayed
+        # Check that only completed items are displayed (not incomplete ones)
         call_args = update.message.reply_text.call_args[0][0]
-        self.assertIn('Checklist Items', call_args)
+        self.assertIn('Completed Items', call_args)
         self.assertIn('Tokyo', call_args)
         self.assertIn('Paris', call_args)
         self.assertIn('2/5', call_args)
         self.assertIn('✅', call_args)  # Completed items
-        self.assertIn('⬜', call_args)  # Incomplete items
+        # Incomplete items should NOT be shown
+        self.assertNotIn('Cairo', call_args)
+        self.assertNotIn('Brasilia', call_args)
+        self.assertNotIn('Canberra', call_args)
+        self.assertNotIn('⬜', call_args)  # No incomplete item markers
     
     async def test_non_matching_answer_shows_progress(self):
         """Test that submitting a non-matching answer shows current progress."""

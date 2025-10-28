@@ -1208,17 +1208,24 @@ class AmazingRaceBot:
             if checklist_items:
                 # Show checklist progress
                 progress = self.game_state.get_checklist_progress(team_name, challenge_id)
-                message += "📝 *Checklist Items:*\n"
                 completed_count = 0
+                completed_items = []
                 for item in checklist_items:
                     if progress.get(item, False):
-                        message += f"✅ {item}\n"
+                        completed_items.append(item)
                         completed_count += 1
-                    else:
-                        message += f"⬜ {item}\n"
                 
-                message += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed\n"
-                message += "💡 *Tip:* Submit each item individually or all at once!\n\n"
+                if completed_items:
+                    message += "📝 *Completed Items:*\n"
+                    for item in completed_items:
+                        message += f"✅ {item}\n"
+                    message += "\n"
+                
+                message += f"*Progress:* {completed_count}/{len(checklist_items)} items completed\n"
+                if completed_count < len(checklist_items):
+                    message += "💡 *Tip:* Submit items to reveal them!\n\n"
+                else:
+                    message += "\n"
             
             # Check if this is a tournament challenge
             if verification_method == 'tournament':
@@ -1645,17 +1652,21 @@ class AmazingRaceBot:
                 checklist_items = verification.get('checklist_items', [])
                 progress = self.game_state.get_checklist_progress(team_name, challenge_id)
                 
-                # Build progress display
+                # Build progress display - only show completed items
                 progress_text = "📝 *Checklist Progress*\n\n"
                 completed_count = 0
+                completed_items = []
                 for item in checklist_items:
                     if progress.get(item, False):
-                        progress_text += f"✅ {item}\n"
+                        completed_items.append(item)
                         completed_count += 1
-                    else:
-                        progress_text += f"⬜ {item}\n"
                 
-                progress_text += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed\n\n"
+                if completed_items:
+                    for item in completed_items:
+                        progress_text += f"✅ {item}\n"
+                    progress_text += "\n"
+                
+                progress_text += f"*Progress:* {completed_count}/{len(checklist_items)} items completed\n\n"
                 
                 if result['matched_items']:
                     progress_text += f"✅ Added: {', '.join(result['matched_items'])}\n\n"
@@ -1666,20 +1677,24 @@ class AmazingRaceBot:
             else:
                 # No match
                 if is_checklist:
-                    # Show checklist progress
+                    # Show checklist progress - only show completed items
                     checklist_items = verification.get('checklist_items', [])
                     progress = self.game_state.get_checklist_progress(team_name, challenge_id)
                     
                     progress_text = "❌ No match found.\n\n📝 *Checklist Progress*\n\n"
                     completed_count = 0
+                    completed_items = []
                     for item in checklist_items:
                         if progress.get(item, False):
-                            progress_text += f"✅ {item}\n"
+                            completed_items.append(item)
                             completed_count += 1
-                        else:
-                            progress_text += f"⬜ {item}\n"
                     
-                    progress_text += f"\n*Progress:* {completed_count}/{len(checklist_items)} items completed"
+                    if completed_items:
+                        for item in completed_items:
+                            progress_text += f"✅ {item}\n"
+                        progress_text += "\n"
+                    
+                    progress_text += f"*Progress:* {completed_count}/{len(checklist_items)} items completed"
                     await update.message.reply_text(progress_text, parse_mode='Markdown')
                 else:
                     await update.message.reply_text(
