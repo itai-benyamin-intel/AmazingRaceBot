@@ -1086,7 +1086,7 @@ class AmazingRaceBot:
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def challenges_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle the /challenges command - shows brief summary of completed and current challenges."""
+        """Handle the /challenges command - shows names of completed and current challenges."""
         user = update.effective_user
         team_name = self.game_state.get_team_by_user(user.id)
         
@@ -1131,13 +1131,10 @@ class AmazingRaceBot:
         
         for i, challenge in enumerate(self.challenges):
             if i < current_challenge_index:
-                # Completed challenge - show title and brief description only
-                message += (
-                    f"✅ *{challenge['name']}*\n"
-                    f"   {challenge['description']}\n\n"
-                )
+                # Completed challenge - show title only
+                message += f"✅ *{challenge['name']}*\n\n"
             elif i == current_challenge_index:
-                # Current challenge - show title and brief description only
+                # Current challenge - show title only
                 if penalty_info:
                     message += (
                         f"⏱️ *{challenge['name']}* (LOCKED - Penalty Timeout)\n"
@@ -1146,10 +1143,7 @@ class AmazingRaceBot:
                         f"   Available at: {penalty_info['unlock_time'].strftime('%H:%M:%S')}\n\n"
                     )
                 else:
-                    message += (
-                        f"🎯 *{challenge['name']}* (CURRENT)\n"
-                        f"   {challenge['description']}\n"
-                    )
+                    message += f"🎯 *{challenge['name']}* (CURRENT)\n"
                     
                     # Show checklist progress if applicable
                     verification = challenge.get('verification', {})
