@@ -754,7 +754,8 @@ class AmazingRaceBot:
             completed: Number of challenges completed
             total: Total number of challenges
             penalty_info: Optional dict with penalty information (hint_count, penalty_minutes, unlock_time)
-            photo_verification_needed: Whether photo verification is needed for next challenge
+            photo_verification_needed: Deprecated - no longer used to avoid duplicate messages.
+                Photo verification details are sent by broadcast_current_challenge() instead.
         """
         team_data = self.game_state.teams[team_name]
         
@@ -782,14 +783,9 @@ class AmazingRaceBot:
                     f"{penalty_info['unlock_time'].strftime('%H:%M:%S')}"
                 )
             
-            # Add photo verification notification if needed
-            if photo_verification_needed:
-                broadcast_message += (
-                    f"\n\n📷 *Photo Verification Required*\n"
-                    f"Before the next challenge is revealed, send a photo of your team at the challenge location.\n"
-                )
-                if penalty_info:
-                    broadcast_message += f"⏱️ Note: The penalty timer will only start after your photo is approved.\n"
+            # Note: Photo verification notification is NOT added here to avoid duplication.
+            # The detailed photo verification message will be sent by broadcast_current_challenge()
+            # which is called immediately after this function.
         
         # Broadcast to all team members
         sent_to_users = set()
