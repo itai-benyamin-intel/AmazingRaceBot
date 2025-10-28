@@ -2465,12 +2465,6 @@ class AmazingRaceBot:
         if action == 'approve':
             # Approve the verification
             if self.game_state.approve_photo_verification(verification_id):
-                # Update admin message
-                await query.edit_message_caption(
-                    caption=query.message.caption + "\n\n✅ *APPROVED - Challenge Revealed*",
-                    parse_mode='Markdown'
-                )
-                
                 # Check if there's an active timeout penalty for this challenge
                 team = self.game_state.teams[team_name]
                 previous_challenge_index = challenge_id - 2  # challenge_id is 1-based, index is 0-based
@@ -2479,6 +2473,7 @@ class AmazingRaceBot:
                 
                 should_broadcast = True
                 timeout_message = ""
+                admin_status = "Challenge Revealed"
                 
                 if unlock_time_str:
                     unlock_time = datetime.fromisoformat(unlock_time_str)
@@ -2495,6 +2490,13 @@ class AmazingRaceBot:
                             f"Challenge will be revealed in {minutes}m {seconds}s.\n"
                             f"Use /current to check when it's available."
                         )
+                        admin_status = f"Timeout Active ({minutes}m {seconds}s remaining)"
+                
+                # Update admin message
+                await query.edit_message_caption(
+                    caption=query.message.caption + f"\n\n✅ *APPROVED - {admin_status}*",
+                    parse_mode='Markdown'
+                )
                 
                 # Broadcast the challenge to all team members (now that photo is approved)
                 # Only if timeout has expired or there's no timeout
