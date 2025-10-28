@@ -206,9 +206,19 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         # Should have 3 completion messages (Bob, Charlie, Admin)
         self.assertEqual(len(completion_messages), 3)
         
-        # Verify photo verification notification is included
+        # Photo verification notification is now in a separate message, not in completion message
+        # Verify completion messages don't include photo verification (to avoid duplication)
         for chat_id, message_text in completion_messages:
-            self.assertIn("Photo Verification Required", message_text)
+            self.assertNotIn("Photo Verification Required", message_text)
+        
+        # Verify that separate photo verification messages are sent
+        photo_verif_messages = [(chat_id, text) for chat_id, text in sent_messages if "Photo Verification Required" in text]
+        # Should have 2 photo verification messages (Bob and Charlie only)
+        # Alice is excluded as the submitter, and admin is not a team member
+        self.assertEqual(len(photo_verif_messages), 2, "Should send photo verification to Bob and Charlie only")
+        
+        # Verify the photo verification messages have detailed instructions
+        for chat_id, message_text in photo_verif_messages:
             self.assertIn("send a photo of your team at the challenge location", message_text)
     
     async def test_photo_verification_without_penalty_on_completion(self):
@@ -254,10 +264,19 @@ class TestPenaltyBroadcast(unittest.IsolatedAsyncioTestCase):
         completion_messages = [(chat_id, text) for chat_id, text in sent_messages if "Challenge Completed!" in text]
         
         # When photo verification is enabled, penalty timer doesn't start until photo is approved
-        # So completion broadcast should only mention photo verification, NOT penalty
+        # So completion broadcast should NOT mention penalty
+        # Photo verification details are in a separate message to avoid duplication
         for chat_id, message_text in completion_messages:
             self.assertNotIn("Hint Penalty Applied", message_text)
-            self.assertIn("Photo Verification Required", message_text)
+            # Photo verification details are in a separate message, not in completion message
+            self.assertNotIn("Photo Verification Required", message_text)
+        
+        # Verify that a separate photo verification message is sent
+        photo_verif_messages = [(chat_id, text) for chat_id, text in sent_messages if "Photo Verification Required" in text]
+        self.assertGreater(len(photo_verif_messages), 0, "Should send separate photo verification message")
+        
+        # Verify the photo verification message has detailed instructions
+        for chat_id, message_text in photo_verif_messages:
             self.assertIn("send a photo of your team at the challenge location", message_text)
     
     async def test_penalty_broadcast_on_photo_approval(self):
