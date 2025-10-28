@@ -38,6 +38,7 @@ addteam - Create a team as admin (usage: /addteam <name>)
 editteam - Rename a team (usage: /editteam <old_name> <new_name>)
 removeteam - Remove a team (usage: /removeteam <name>)
 togglephotoverify - Toggle photo verification on/off (admin only)
+pass - Manually advance a team past current challenge (usage: /pass <team_name>)
 ```
 
 ## All Commands (Combined Format for BotFather)
@@ -65,6 +66,7 @@ addteam - Create a team (admin only)
 editteam - Rename a team (admin only)
 removeteam - Remove a team (admin only)
 togglephotoverify - Toggle photo verification (admin only)
+pass - Manually advance a team (admin only)
 ```
 
 ## Notes

@@ -24,6 +24,7 @@ class GameState:
         self.pending_photo_submissions: Dict[str, Dict] = {}  # Track pending photo submissions
         self.pending_photo_verifications: Dict[str, Dict] = {}  # Track pending photo verifications for location
         self.tournaments: Dict[int, Dict] = {}  # Track tournament state per challenge ID
+        self.admin_audit_log: List[Dict] = []  # Track admin actions for audit trail
         self.load_state()
     
     def load_state(self):
@@ -41,6 +42,7 @@ class GameState:
                     self.pending_photo_submissions = data.get('pending_photo_submissions', {})
                     self.pending_photo_verifications = data.get('pending_photo_verifications', {})
                     self.tournaments = data.get('tournaments', {})
+                    self.admin_audit_log = data.get('admin_audit_log', [])
             except Exception as e:
                 print(f"Error loading state: {e}")
     
@@ -56,7 +58,8 @@ class GameState:
                 'hint_usage': self.hint_usage,
                 'pending_photo_submissions': self.pending_photo_submissions,
                 'pending_photo_verifications': self.pending_photo_verifications,
-                'tournaments': self.tournaments
+                'tournaments': self.tournaments,
+                'admin_audit_log': self.admin_audit_log
             }
             with open(self.state_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -153,6 +156,78 @@ class GameState:
         self.save_state()
         return True
     
+    def pass_team(self, team_name: str, total_challenges: int, admin_id: int, admin_name: str) -> bool:
+        """Manually advance a team past the current challenge (admin override).
+        
+        This function allows admins to manually mark the current challenge as complete
+        for a team, bypassing normal verification. Used for handling exceptional circumstances,
+        technical difficulties, or manual overrides during live events.
+        
+        Args:
+            team_name: Name of the team to advance
+            total_challenges: Total number of challenges in the game
+            admin_id: ID of the admin performing the action
+            admin_name: Name of the admin performing the action
+        
+        Returns:
+            True if team was successfully advanced, False otherwise
+        """
+        if team_name not in self.teams:
+            return False
+        
+        # Get current challenge info
+        team_data = self.teams[team_name]
+        current_index = team_data.get('current_challenge_index', 0)
+        
+        # Check if team has already finished all challenges
+        if current_index >= total_challenges:
+            return False
+        
+        # Calculate the challenge ID (1-based)
+        challenge_id = current_index + 1
+        
+        # Check if challenge is already completed
+        if challenge_id in team_data['completed_challenges']:
+            return False
+        
+        # Mark challenge as completed with admin override data
+        submission_data = {
+            'type': 'admin_pass',
+            'admin_id': admin_id,
+            'admin_name': admin_name,
+            'timestamp': datetime.now().isoformat(),
+            'reason': 'Manual admin override using /pass command'
+        }
+        
+        team_data['completed_challenges'].append(challenge_id)
+        team_data['current_challenge_index'] += 1
+        
+        # Set completion time (no photo verification deferral for admin pass)
+        self.set_challenge_completion_time(team_name, challenge_id)
+        
+        # Store submission data
+        if 'challenge_submissions' not in team_data:
+            team_data['challenge_submissions'] = {}
+        team_data['challenge_submissions'][str(challenge_id)] = submission_data
+        
+        # Check if team finished all challenges
+        if len(team_data['completed_challenges']) >= total_challenges:
+            team_data['finish_time'] = datetime.now().isoformat()
+        
+        # Log this action in the audit trail
+        audit_entry = {
+            'action': 'pass_team',
+            'team_name': team_name,
+            'challenge_id': challenge_id,
+            'admin_id': admin_id,
+            'admin_name': admin_name,
+            'timestamp': datetime.now().isoformat()
+        }
+        self.admin_audit_log.append(audit_entry)
+        
+        self.save_state()
+        return True
+    
     def get_team_by_user(self, user_id: int) -> Optional[str]:
         """Get the team name for a given user."""
         for team_name, team_data in self.teams.items():
@@ -201,6 +276,7 @@ class GameState:
         self.pending_photo_submissions = {}
         self.pending_photo_verifications = {}
         self.tournaments = {}
+        self.admin_audit_log = []
         self.save_state()
     
     def update_team(self, team_name: str, new_team_name: str = None, 

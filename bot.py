@@ -2854,6 +2854,133 @@ class AmazingRaceBot:
                 parse_mode='Markdown'
             )
 
+    async def pass_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /pass command (admin only) - manually advance a team past current challenge."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can use the /pass command!")
+            return
+        
+        if not self.game_state.game_started:
+            await update.message.reply_text("The game hasn't started yet!")
+            return
+        
+        if self.game_state.game_ended:
+            await update.message.reply_text("The game has already ended!")
+            return
+        
+        # Parse command: /pass <team_name>
+        if not context.args:
+            await update.message.reply_text(
+                "Usage: `/pass <team_name>`\n\n"
+                "Example: `/pass RedTeam`\n\n"
+                "This command manually advances a team past their current challenge.\n"
+                "Use this for exceptional circumstances, technical difficulties, or manual overrides.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        team_name = ' '.join(context.args)
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await update.message.reply_text(f"❌ Team '{team_name}' doesn't exist!")
+            return
+        
+        # Get team's current challenge info
+        team_data = self.game_state.teams[team_name]
+        current_challenge_index = team_data.get('current_challenge_index', 0)
+        
+        # Check if team has already finished all challenges
+        if current_challenge_index >= len(self.challenges):
+            await update.message.reply_text(
+                f"❌ Team '{team_name}' has already completed all challenges!"
+            )
+            return
+        
+        # Get the current challenge
+        current_challenge = self.challenges[current_challenge_index]
+        challenge_id = current_challenge['id']
+        challenge_name = current_challenge['name']
+        
+        # Check if challenge is already completed
+        if challenge_id in team_data['completed_challenges']:
+            await update.message.reply_text(
+                f"❌ Team '{team_name}' has already completed Challenge #{challenge_id}!"
+            )
+            return
+        
+        # Pass the team
+        success = self.game_state.pass_team(
+            team_name, 
+            len(self.challenges),
+            user.id,
+            user.first_name or "Admin"
+        )
+        
+        if not success:
+            await update.message.reply_text(
+                f"❌ Failed to advance team '{team_name}'. Please check the team status and try again."
+            )
+            return
+        
+        # Calculate progress
+        completed = len(team_data['completed_challenges'])
+        total = len(self.challenges)
+        
+        # Send confirmation to admin
+        confirmation_msg = (
+            f"✅ *Team Manually Advanced*\n\n"
+            f"Team: {team_name}\n"
+            f"Challenge #{challenge_id}: {challenge_name}\n"
+            f"Advanced by: {user.first_name}\n"
+            f"Progress: {completed}/{total} challenges\n\n"
+            f"⚠️ This action has been logged for audit purposes."
+        )
+        
+        if team_data.get('finish_time'):
+            confirmation_msg += f"\n\n🏆 *Team has finished all challenges!*"
+        
+        await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+        
+        # Notify all team members
+        notification_msg = (
+            f"✅ *Challenge Passed by Admin*\n\n"
+            f"Team: {team_name}\n"
+            f"Challenge #{challenge_id}: {challenge_name}\n"
+            f"Progress: {completed}/{total} challenges\n\n"
+            f"Your team has been manually advanced past this challenge by an admin.\n"
+        )
+        
+        if team_data.get('finish_time'):
+            notification_msg += (
+                f"\n🏆 *CONGRATULATIONS!* 🏆\n"
+                f"Your team finished the race!\n"
+                f"Finish time: {team_data['finish_time']}"
+            )
+        else:
+            notification_msg += "Use /current to see your next challenge."
+        
+        # Broadcast to all team members
+        sent_to_users = set()
+        for member in team_data['members']:
+            member_id = member['id']
+            if member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=notification_msg,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+            except Exception as e:
+                logger.error(f"Failed to notify team member {member_id}: {e}")
+        
+        # Broadcast next challenge if team hasn't finished
+        if not team_data.get('finish_time'):
+            await self.broadcast_current_challenge(context, team_name)
     
     async def unrecognized_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle unrecognized text messages."""
@@ -2973,6 +3100,7 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("tournamentwin", self.tournamentwin_command))
         application.add_handler(CommandHandler("tournamentstatus", self.tournamentstatus_command))
         application.add_handler(CommandHandler("tournamentreset", self.tournamentreset_command))
+        application.add_handler(CommandHandler("pass", self.pass_command))
         
         # Add callback query handlers
         application.add_handler(CallbackQueryHandler(
