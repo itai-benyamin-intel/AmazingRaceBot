@@ -55,6 +55,135 @@ class AmazingRaceBot:
         """Check if user is an admin."""
         return self.admin_id is not None and user_id == self.admin_id
     
+    def validate_image_path(self, image_path: str) -> Optional[str]:
+        """Validate a local image path for security.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            Absolute path if valid, None otherwise
+        """
+        import os
+        
+        # Ensure path doesn't contain directory traversal attempts
+        if '..' in image_path or image_path.startswith('/'):
+            logger.warning(f"Rejected image path with directory traversal: {image_path}")
+            return None
+        
+        # Construct absolute path relative to bot directory
+        bot_dir = os.path.dirname(os.path.abspath(__file__))
+        abs_path = os.path.abspath(os.path.join(bot_dir, image_path))
+        
+        # Ensure the path is within the bot directory
+        if not abs_path.startswith(bot_dir):
+            logger.warning(f"Rejected image path outside bot directory: {image_path}")
+            return None
+        
+        # Check if file exists
+        if not os.path.isfile(abs_path):
+            logger.warning(f"Image file not found: {abs_path}")
+            return None
+        
+        # Check file extension
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+        ext = os.path.splitext(abs_path)[1].lower()
+        if ext not in allowed_extensions:
+            logger.warning(f"Rejected image with unsupported extension: {ext}")
+            return None
+        
+        return abs_path
+    
+    def validate_image_url(self, image_url: str) -> bool:
+        """Validate an image URL for security.
+        
+        Args:
+            image_url: URL to the image
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        # Only allow HTTPS URLs for security
+        if not image_url.startswith('https://'):
+            logger.warning(f"Rejected non-HTTPS image URL: {image_url}")
+            return False
+        
+        # Basic URL validation - check for common image extensions
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+        url_lower = image_url.lower()
+        
+        # Allow URLs without extension if they're from common image hosting services
+        trusted_domains = ['imgur.com', 'i.imgur.com', 'example.com']
+        if any(domain in url_lower for domain in trusted_domains):
+            return True
+        
+        # Otherwise, check for image extension
+        if not any(url_lower.endswith(ext) for ext in allowed_extensions):
+            # Allow query parameters after extension
+            for ext in allowed_extensions:
+                if ext in url_lower:
+                    return True
+            logger.warning(f"Rejected URL without image extension: {image_url}")
+            return False
+        
+        return True
+    
+    async def send_image(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, 
+                        image_url: Optional[str] = None, image_path: Optional[str] = None,
+                        caption: Optional[str] = None) -> bool:
+        """Send an image to a chat.
+        
+        Args:
+            context: Telegram context
+            chat_id: Chat ID to send to
+            image_url: Optional URL to remote image
+            image_path: Optional path to local image
+            caption: Optional caption for the image
+            
+        Returns:
+            True if image was sent successfully, False otherwise
+        """
+        try:
+            if image_url:
+                # Validate URL
+                if not self.validate_image_url(image_url):
+                    logger.error(f"Invalid image URL: {image_url}")
+                    return False
+                
+                # Send image from URL
+                await context.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=image_url,
+                    caption=caption,
+                    parse_mode='Markdown' if caption else None
+                )
+                return True
+            
+            elif image_path:
+                # Validate local path
+                abs_path = self.validate_image_path(image_path)
+                if not abs_path:
+                    logger.error(f"Invalid image path: {image_path}")
+                    return False
+                
+                # Send image from local file
+                with open(abs_path, 'rb') as image_file:
+                    await context.bot.send_photo(
+                        chat_id=chat_id,
+                        photo=image_file,
+                        caption=caption,
+                        parse_mode='Markdown' if caption else None
+                    )
+                return True
+            
+            else:
+                logger.error("No image URL or path provided")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to send image: {e}")
+            return False
+    
     def requires_photo_verification(self, challenge: dict, challenge_index: int) -> bool:
         """Check if photo verification is required for a specific challenge.
         
@@ -556,6 +685,19 @@ class AmazingRaceBot:
                 continue
             
             try:
+                # Send image first if configured
+                image_url = challenge.get('image_url')
+                image_path = challenge.get('image_path')
+                if image_url or image_path:
+                    await self.send_image(
+                        context=context,
+                        chat_id=member_id,
+                        image_url=image_url,
+                        image_path=image_path,
+                        caption=f"📸 Image for Challenge #{challenge_id}"
+                    )
+                
+                # Then send the challenge text
                 await context.bot.send_message(
                     chat_id=member_id,
                     text=broadcast_message,
@@ -1282,6 +1424,19 @@ class AmazingRaceBot:
             if verification_method != 'tournament':
                 message += "\nUse /submit [answer] to submit this challenge."
         
+        # Send image first if configured and challenge is not locked
+        if not is_locked:
+            image_url = challenge.get('image_url')
+            image_path = challenge.get('image_path')
+            if image_url or image_path:
+                await self.send_image(
+                    context=context,
+                    chat_id=update.effective_chat.id,
+                    image_url=image_url,
+                    image_path=image_path,
+                    caption=f"📸 Image for Challenge #{challenge_id}"
+                )
+        
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def hint_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1430,6 +1585,32 @@ class AmazingRaceBot:
             parse_mode='Markdown'
         )
         
+        # Check if there's an image for this hint
+        hint_images = current_challenge.get('hint_images', {})
+        hint_image_url = None
+        hint_image_path = None
+        
+        if hint_images:
+            # hint_images is a dict with hint index as key
+            hint_image_config = hint_images.get(hint_index) or hint_images.get(str(hint_index))
+            if hint_image_config:
+                # Check if it's a URL or path
+                if isinstance(hint_image_config, str):
+                    if hint_image_config.startswith('http'):
+                        hint_image_url = hint_image_config
+                    else:
+                        hint_image_path = hint_image_config
+        
+        # Send hint image to the requesting user if available
+        if hint_image_url or hint_image_path:
+            await self.send_image(
+                context=context,
+                chat_id=user.id,
+                image_url=hint_image_url,
+                image_path=hint_image_path,
+                caption=f"📸 Image for Hint #{hint_index + 1}"
+            )
+        
         # Broadcast hint to all team members
         team_data = self.game_state.teams[team_name]
         broadcast_message = (
@@ -1448,6 +1629,17 @@ class AmazingRaceBot:
                 continue
             
             try:
+                # Send image to team members if available
+                if hint_image_url or hint_image_path:
+                    await self.send_image(
+                        context=context,
+                        chat_id=member_id,
+                        image_url=hint_image_url,
+                        image_path=hint_image_path,
+                        caption=f"📸 Image for Hint #{hint_index + 1}"
+                    )
+                
+                # Send text broadcast
                 await context.bot.send_message(
                     chat_id=member_id,
                     text=broadcast_message,

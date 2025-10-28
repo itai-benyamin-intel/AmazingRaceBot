@@ -43,5 +43,9 @@ Thumbs.db
 config.yml
 game_state.json
 
+# Test files
+test_*.yml
+test_*.json
+
 # Logs
 *.log
