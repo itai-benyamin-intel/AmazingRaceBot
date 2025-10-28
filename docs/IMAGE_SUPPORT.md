@@ -81,7 +81,8 @@ challenges:
 **Trusted Domains** (allowed without file extension):
 - `imgur.com`
 - `i.imgur.com`
-- `example.com` (for testing)
+
+**Note:** For testing purposes, `example.com` is also allowed. Remove this from the code before production use.
 
 ### Local Images (File Paths)
 
@@ -113,9 +114,9 @@ The image support includes several security measures to protect your bot and ser
 
 ### URL Validation
 
-- **HTTPS Only**: Only HTTPS URLs are accepted to prevent man-in-the-middle attacks
-- **Domain Whitelisting**: Trusted domains are allowed even without file extensions
-- **Extension Checking**: URLs are validated for image file extensions
+- **HTTPS Only**: Only HTTPS URLs are accepted to prevent eavesdropping and tampering during transmission
+- **Domain Whitelisting**: Trusted domains (imgur.com, i.imgur.com) are allowed even without file extensions
+- **Extension Checking**: URLs from non-trusted domains are validated for image file extensions
 
 ### Path Validation
 
@@ -240,7 +241,9 @@ The image support includes several security measures to protect your bot and ser
 ### Image Not Sending
 
 **Check the logs** for error messages:
-- `Invalid image URL`: URL doesn't use HTTPS or lacks proper extension
+- `Invalid image URL`: URL doesn't use HTTPS
+- `Rejected non-HTTPS image URL`: URL uses HTTP instead of HTTPS
+- `Rejected URL without image extension`: URL from non-trusted domain lacks image extension
 - `Invalid image path`: Path has directory traversal or is absolute
 - `Image file not found`: Local file doesn't exist
 - `Rejected image with unsupported extension`: File type not supported

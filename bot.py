@@ -113,6 +113,7 @@ class AmazingRaceBot:
         url_lower = image_url.lower()
         
         # Allow URLs without extension if they're from common image hosting services
+        # Note: 'example.com' is included for testing only - remove in production
         trusted_domains = ['imgur.com', 'i.imgur.com', 'example.com']
         if any(domain in url_lower for domain in trusted_domains):
             return True
