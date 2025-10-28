@@ -3225,31 +3225,68 @@ class AmazingRaceBot:
             waiting_command = context.user_data['waiting_for']['command']
             user_input = update.message.text.strip()
             
-            # Clear the waiting state
-            del context.user_data['waiting_for']
-            
             # Route to the appropriate command handler with the text as argument
             if waiting_command == 'createteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 # Simulate command with args
                 context.args = user_input.split()
                 await self.create_team_command(update, context)
                 return
             elif waiting_command == 'jointeam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.join_team_command(update, context)
                 return
             elif waiting_command == 'submit':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 # For submit, we need to call it with the answer
                 context.args = user_input.split()
                 await self.submit_command(update, context)
                 return
             elif waiting_command == 'addteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.addteam_command(update, context)
                 return
             elif waiting_command == 'removeteam':
+                # Clear the waiting state
+                del context.user_data['waiting_for']
                 context.args = user_input.split()
                 await self.removeteam_command(update, context)
+                return
+            elif waiting_command == 'message':
+                # Handle /message interactive flow - message text received
+                team_name = context.user_data['waiting_for'].get('team_name')
+                # Clear the waiting state
+                del context.user_data['waiting_for']
+                
+                if not team_name:
+                    await update.message.reply_text("❌ Error: Team name not found. Please try again.")
+                    return
+                
+                # Verify team still exists
+                if team_name not in self.game_state.teams:
+                    await update.message.reply_text(f"❌ Team '{team_name}' no longer exists!")
+                    return
+                
+                # Send the message using the same logic as message_command
+                # user_input is the full message text, keep it together as one element after team name
+                context.args = [team_name, user_input]
+                await self.message_command(update, context)
+                return
+            elif waiting_command == 'broadcast':
+                # Handle /broadcast interactive flow - message text received
+                # Clear the waiting state
+                del context.user_data['waiting_for']
+                
+                # Send the broadcast using the same logic as broadcast_command
+                # user_input is the full message text, keep it as a single element
+                context.args = [user_input]
+                await self.broadcast_command(update, context)
                 return
         
         # Check if game is active and user is in a team - treat message as submission
@@ -3288,6 +3325,194 @@ class AmazingRaceBot:
         )
         
         await update.message.reply_text(response)
+    
+    async def message_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /message command (admin only) - send a message to a specific team."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can use the /message command!")
+            return
+        
+        # Check if no args provided - start interactive flow
+        if not context.args:
+            # Check if there are any teams
+            if not self.game_state.teams:
+                await update.message.reply_text("❌ No teams exist yet!")
+                return
+            
+            # Create inline keyboard with team selection buttons
+            keyboard = []
+            for team_name in sorted(self.game_state.teams.keys()):
+                keyboard.append([InlineKeyboardButton(team_name, callback_data=f"msg_team_{team_name}")])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "📨 *Send Message to Team*\n\n"
+                "Select the team you want to send a message to:",
+                parse_mode='Markdown',
+                reply_markup=reply_markup
+            )
+            return
+        
+        # Parse command: /message <team_name> <message>
+        if len(context.args) < 2:
+            await update.message.reply_text(
+                "Usage: `/message <team_name> <message>`\n\n"
+                "Example: `/message RedTeam Great job on the last challenge!`\n\n"
+                "Or use `/message` without arguments for interactive team selection.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Extract team name and message
+        team_name = context.args[0]
+        message_text = ' '.join(context.args[1:])
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await update.message.reply_text(f"❌ Team '{team_name}' doesn't exist!")
+            return
+        
+        # Get team data
+        team_data = self.game_state.teams[team_name]
+        
+        # Prepare the message to send to the team
+        team_message = (
+            f"📨 *Message from Admin*\n\n"
+            f"{message_text}"
+        )
+        
+        # Send message to all team members
+        sent_to_users = set()
+        success_count = 0
+        for member in team_data['members']:
+            member_id = member['id']
+            if member_id in sent_to_users:
+                continue
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=member_id,
+                    text=team_message,
+                    parse_mode='Markdown'
+                )
+                sent_to_users.add(member_id)
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send message to team member {member_id}: {e}")
+        
+        # Send confirmation to admin
+        confirmation_msg = (
+            f"✅ *Message Sent*\n\n"
+            f"Team: {team_name}\n"
+            f"Members notified: {success_count}/{len(team_data['members'])}\n"
+            f"Message: {message_text}"
+        )
+        
+        await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+    
+    async def broadcast_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle the /broadcast command (admin only) - send a message to all teams."""
+        user = update.effective_user
+        if not self.is_admin(user.id):
+            await update.message.reply_text("Only admins can use the /broadcast command!")
+            return
+        
+        # Check if no args provided - start interactive flow
+        if not context.args:
+            # Check if there are any teams
+            if not self.game_state.teams:
+                await update.message.reply_text("❌ No teams exist yet!")
+                return
+            
+            # Store that we're waiting for broadcast message
+            if 'waiting_for' not in context.user_data:
+                context.user_data['waiting_for'] = {}
+            context.user_data['waiting_for']['command'] = 'broadcast'
+            
+            await update.message.reply_text(
+                "📢 *Broadcast to All Teams*\n\n"
+                "Please enter the message you want to broadcast to all teams:",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Extract message
+        message_text = ' '.join(context.args)
+        
+        # Check if there are any teams
+        if not self.game_state.teams:
+            await update.message.reply_text("❌ No teams exist yet!")
+            return
+        
+        # Prepare the message to broadcast
+        broadcast_message = (
+            f"📢 *Broadcast from Admin*\n\n"
+            f"{message_text}"
+        )
+        
+        # Send message to all team members across all teams
+        sent_to_users = set()
+        success_count = 0
+        
+        for team_name, team_data in self.game_state.teams.items():
+            for member in team_data['members']:
+                member_id = member['id']
+                
+                # Skip if already sent to this user (avoid duplicates if someone is in multiple teams)
+                if member_id in sent_to_users:
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        chat_id=member_id,
+                        text=broadcast_message,
+                        parse_mode='Markdown'
+                    )
+                    sent_to_users.add(member_id)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send broadcast to user {member_id}: {e}")
+        
+        # Send confirmation to admin
+        confirmation_msg = (
+            f"✅ *Broadcast Sent*\n\n"
+            f"Teams: {len(self.game_state.teams)}\n"
+            f"Unique members notified: {success_count}\n"
+            f"Message: {message_text}"
+        )
+        
+        await update.message.reply_text(confirmation_msg, parse_mode='Markdown')
+    
+    async def message_team_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle team selection callback for /message command."""
+        query = update.callback_query
+        await query.answer()
+        
+        # Parse callback data: msg_team_{team_name}
+        if not query.data.startswith('msg_team_'):
+            await query.edit_message_text("❌ Invalid team selection.")
+            return
+        
+        team_name = query.data.replace('msg_team_', '')
+        
+        # Verify team exists
+        if team_name not in self.game_state.teams:
+            await query.edit_message_text(f"❌ Team '{team_name}' no longer exists!")
+            return
+        
+        # Store the selected team in user_data and set waiting state
+        if 'waiting_for' not in context.user_data:
+            context.user_data['waiting_for'] = {}
+        context.user_data['waiting_for']['command'] = 'message'
+        context.user_data['waiting_for']['team_name'] = team_name
+        
+        # Update the message to show team selected and ask for message text
+        await query.edit_message_text(
+            f"📨 *Send Message to Team: {team_name}*\n\n"
+            f"Please enter the message you want to send to this team:",
+            parse_mode='Markdown'
+        )
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors."""
@@ -3329,6 +3554,8 @@ class AmazingRaceBot:
         application.add_handler(CommandHandler("tournamentstatus", self.tournamentstatus_command))
         application.add_handler(CommandHandler("tournamentreset", self.tournamentreset_command))
         application.add_handler(CommandHandler("pass", self.pass_command))
+        application.add_handler(CommandHandler("message", self.message_command))
+        application.add_handler(CommandHandler("broadcast", self.broadcast_command))
         
         # Add callback query handlers
         application.add_handler(CallbackQueryHandler(
@@ -3338,6 +3565,10 @@ class AmazingRaceBot:
         application.add_handler(CallbackQueryHandler(
             self.photo_approval_callback_handler, 
             pattern="^(approve|reject)_.*"
+        ))
+        application.add_handler(CallbackQueryHandler(
+            self.message_team_callback_handler,
+            pattern="^msg_team_.*"
         ))
         application.add_handler(CallbackQueryHandler(self.hint_callback_handler))
         

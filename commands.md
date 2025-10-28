@@ -39,6 +39,8 @@ editteam - Rename a team (usage: /editteam <old_name> <new_name>)
 removeteam - Remove a team (usage: /removeteam <name>)
 togglephotoverify - Toggle photo verification on/off (admin only)
 pass - Manually advance a team past current challenge (usage: /pass <team_name>)
+message - Send a message to a specific team (usage: /message <team_name> <message>)
+broadcast - Send a message to all teams (usage: /broadcast <message>)
 ```
 
 ## All Commands (Combined Format for BotFather)
@@ -67,6 +69,8 @@ editteam - Rename a team (admin only)
 removeteam - Remove a team (admin only)
 togglephotoverify - Toggle photo verification (admin only)
 pass - Manually advance a team (admin only)
+message - Send a message to a specific team (admin only)
+broadcast - Send a message to all teams (admin only)
 ```
 
 ## Notes
