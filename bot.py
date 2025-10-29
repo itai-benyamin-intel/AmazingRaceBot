@@ -1486,7 +1486,12 @@ class AmazingRaceBot:
             
             # Don't show submit instructions for tournament challenges
             if verification_method != 'tournament':
-                message += "\nUse /submit [answer] to submit this challenge."
+                # Provide context-aware submit instructions based on verification method
+                if verification_method == 'photo' or verification_method == 'video':
+                    media_type = "video" if verification_method == 'video' else "photo"
+                    message += f"\nUse /submit to upload your {media_type}."
+                else:
+                    message += "\nUse /submit [answer] to submit this challenge."
         
         # Send image first if configured and challenge is not locked
         if not is_locked:
