@@ -7,8 +7,6 @@ import yaml
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from telegram import Update, User, Message
-import sys
-sys.path.insert(0, '/home/runner/work/AmazingRaceBot/AmazingRaceBot')
 
 from bot import AmazingRaceBot
 
