@@ -29,6 +29,11 @@ game:
   #   - photos_required: Optional number of photos required (default: 1)
   #     Teams see a counter showing progress (e.g., "2/5 photos submitted")
   #     Challenge completes only when all required photos are approved
+  # - video: Requires video submission (manual admin verification)
+  #   - Works the same as 'photo' but expects video files for challenge completion
+  #   - Note: If requires_photo_verification is true, teams must still send a PHOTO
+  #     for location verification before the challenge is revealed, then submit the
+  #     VIDEO to complete the challenge itself
   # - tournament: Admin reports match results to determine winners
   #
   # Photo Verification for Location Arrival:
@@ -145,6 +150,20 @@ game:
       type: "team_activity"
       verification:
         method: "photo"
+      
+    # Example challenge with video verification
+    # - id: 7
+    #   name: "Stars"
+    #   description: |
+    #     It's time to direct and film a short video that highlights a situation showing what it's like to work as uCode Engineers! 🎬
+    #     - **Length:** Keep it between 30 seconds and 1 minute max.
+    #     - **Participation:** Every team member must be in the video (including the person running the camera!).
+    #   location: "Mishmar HaCarmel Farm"
+    #   type: "team_activity"
+    #   verification:
+    #     method: "video"
+    #   requires_photo_verification: true  # Optional: require location photo before challenge reveal
+    #   success_message: "Good Job, you are almost there!"
       
     - id: 7
       name: "Scavenger Hunt"

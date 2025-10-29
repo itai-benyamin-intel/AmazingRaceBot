@@ -342,7 +342,7 @@ class AmazingRaceBot:
         verification = challenge.get('verification', {})
         method = verification.get('method', 'photo')  # Default to 'photo' for backward compatibility
         
-        if method == 'photo':
+        if method == 'photo' or method == 'video':
             return 'photo'
         elif method == 'answer':
             return 'text'
@@ -397,17 +397,19 @@ class AmazingRaceBot:
         verification = challenge.get('verification', {})
         method = verification.get('method', 'photo')
         
-        if method == 'photo':
+        if method == 'photo' or method == 'video':
             photos_required = verification.get('photos_required', 1)
+            media_type = "video" if method == 'video' else "photo"
             if photos_required > 1:
                 # Get current count if team_name provided
                 if team_name:
                     current_count = self.game_state.get_photo_submission_count(team_name, challenge['id'])
-                    return f"📷 Submit {photos_required} photos to complete this challenge. ({current_count}/{photos_required} submitted)"
+                    return f"📷 Submit {photos_required} {media_type}s to complete this challenge. ({current_count}/{photos_required} submitted)"
                 else:
-                    return f"📷 Submit {photos_required} photos to complete this challenge."
+                    return f"📷 Submit {photos_required} {media_type}s to complete this challenge."
             else:
-                return "📷 Submit a photo to complete this challenge."
+                icon = "🎬" if method == 'video' else "📷"
+                return f"{icon} Submit a {media_type} to complete this challenge."
         elif method == 'answer':
             challenge_type = challenge.get('type', 'text')
             if challenge_type == 'riddle':
@@ -1969,8 +1971,8 @@ class AmazingRaceBot:
                         f"Hint: Make sure your answer matches what's being asked."
                     )
         
-        elif method == 'photo':
-            # Photo verification - wait for photo
+        elif method == 'photo' or method == 'video':
+            # Photo/Video verification - wait for photo/video
             # Store pending submission in context
             if 'pending_submissions' not in context.bot_data:
                 context.bot_data['pending_submissions'] = {}
@@ -1981,10 +1983,12 @@ class AmazingRaceBot:
                 'challenge_name': challenge['name']
             }
             
+            media_type = "video" if method == 'video' else "photo"
+            icon = "🎬" if method == 'video' else "📷"
             await update.message.reply_text(
-                f"📷 Please send a photo for:\n"
+                f"{icon} Please send a {media_type} for:\n"
                 f"*{challenge['name']}*\n\n"
-                f"The photo will be reviewed by the admin.",
+                f"The {media_type} will be reviewed by the admin.",
                 parse_mode='Markdown'
             )
         
@@ -2347,25 +2351,39 @@ class AmazingRaceBot:
                         )
                         return
                 
-                # Get the photo
-                photo = update.message.photo[-1]  # Get highest resolution
+                # Get the photo or video
+                if update.message.photo:
+                    media = update.message.photo[-1]  # Get highest resolution
+                    media_type = "photo"
+                    media_icon = "📷"
+                elif update.message.video:
+                    media = update.message.video
+                    media_type = "video"
+                    media_icon = "🎬"
+                else:
+                    # Neither photo nor video - shouldn't happen but handle gracefully
+                    await update.message.reply_text(
+                        "⚠️ Please send a photo or video for location verification.",
+                        parse_mode='Markdown'
+                    )
+                    return
                 
-                # Store the photo verification as pending
+                # Store the photo/video verification as pending
                 verification_id = self.game_state.add_pending_photo_verification(
-                    team_name, challenge_id, photo.file_id, user.id, user.first_name
+                    team_name, challenge_id, media.file_id, user.id, user.first_name
                 )
                 
-                # Notify the user that photo was submitted for verification
+                # Notify the user that photo/video was submitted for verification
                 response = (
-                    f"📷 *Photo Verification Submitted*\n\n"
-                    f"Your photo for arriving at Challenge #{challenge_id} has been sent to the admin for verification.\n\n"
-                    f"The challenge details will be revealed once the admin approves your photo.\n"
+                    f"{media_icon} *{media_type.capitalize()} Verification Submitted*\n\n"
+                    f"Your {media_type} for arriving at Challenge #{challenge_id} has been sent to the admin for verification.\n\n"
+                    f"The challenge details will be revealed once the admin approves your {media_type}.\n"
                     f"You will be notified when approved."
                 )
                 
                 await update.message.reply_text(response, parse_mode='Markdown')
                 
-                # Send photo to admin for verification with approval/rejection buttons
+                # Send photo/video to admin for verification with approval/rejection buttons
                 if self.admin_id:
                     try:
                         keyboard = [
@@ -2378,30 +2396,41 @@ class AmazingRaceBot:
                         
                         challenge_name = current_challenge.get('name', f'Challenge #{challenge_id}')
                         
-                        await context.bot.send_photo(
-                            chat_id=self.admin_id,
-                            photo=photo.file_id,
-                            caption=(
-                                f"📷 *Photo Verification - Location Arrival*\n"
-                                f"Team: {team_name}\n"
-                                f"Challenge #{challenge_id}: {challenge_name}\n"
-                                f"Submitted by: {user.first_name}\n\n"
-                                f"Approve to reveal the challenge to the team.\n"
-                                f"Verification ID: `{verification_id}`"
-                            ),
-                            parse_mode='Markdown',
-                            reply_markup=reply_markup
+                        caption_text = (
+                            f"{media_icon} *{media_type.capitalize()} Verification - Location Arrival*\n"
+                            f"Team: {team_name}\n"
+                            f"Challenge #{challenge_id}: {challenge_name}\n"
+                            f"Submitted by: {user.first_name}\n\n"
+                            f"Approve to reveal the challenge to the team.\n"
+                            f"Verification ID: `{verification_id}`"
                         )
+                        
+                        if media_type == "photo":
+                            await context.bot.send_photo(
+                                chat_id=self.admin_id,
+                                photo=media.file_id,
+                                caption=caption_text,
+                                parse_mode='Markdown',
+                                reply_markup=reply_markup
+                            )
+                        else:  # video
+                            await context.bot.send_video(
+                                chat_id=self.admin_id,
+                                video=media.file_id,
+                                caption=caption_text,
+                                parse_mode='Markdown',
+                                reply_markup=reply_markup
+                            )
                     except Exception as e:
-                        logger.error(f"Failed to send photo verification to admin: {e}")
+                        logger.error(f"Failed to send {media_type} verification to admin: {e}")
                 
                 return
         
         # If we reach here, photo verification is either disabled or already done
-        # Check if current challenge requires a photo submission
+        # Check if current challenge requires a photo/video submission
         verification = current_challenge.get('verification', {})
-        if verification.get('method') == 'photo':
-            # This is a photo challenge - treat the photo as a submission
+        if verification.get('method') == 'photo' or verification.get('method') == 'video':
+            # This is a photo/video challenge - treat the photo as a submission
             # Store in pending_submissions and call _handle_photo_submission
             if 'pending_submissions' not in context.bot_data:
                 context.bot_data['pending_submissions'] = {}
@@ -2425,7 +2454,7 @@ class AmazingRaceBot:
         # Ignore it silently (user might be sending unrelated photos)
     
     async def _handle_photo_submission(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle photo submission for challenge completion."""
+        """Handle photo/video submission for challenge completion."""
         user = update.effective_user
         
         pending = context.bot_data['pending_submissions'][user.id]
@@ -2433,25 +2462,39 @@ class AmazingRaceBot:
         challenge_id = pending['challenge_id']
         challenge_name = pending['challenge_name']
         
-        # Get the photo
-        photo = update.message.photo[-1]  # Get highest resolution
+        # Get the photo or video
+        if update.message.photo:
+            media = update.message.photo[-1]  # Get highest resolution
+            media_type = "photo"
+            media_icon = "📷"
+        elif update.message.video:
+            media = update.message.video
+            media_type = "video"
+            media_icon = "🎬"
+        else:
+            # Neither photo nor video - shouldn't happen but handle gracefully
+            await update.message.reply_text(
+                "⚠️ Please send a photo or video for this challenge.",
+                parse_mode='Markdown'
+            )
+            return
         
         # Store the submission as pending (not auto-completing)
         submission_id = self.game_state.add_pending_photo_submission(
-            team_name, challenge_id, photo.file_id, user.id, user.first_name
+            team_name, challenge_id, media.file_id, user.id, user.first_name
         )
         
-        # Notify the user that photo was submitted and is pending review
+        # Notify the user that photo/video was submitted and is pending review
         response = (
-            f"📷 Photo submitted for:\n"
+            f"{media_icon} {media_type.capitalize()} submitted for:\n"
             f"*{challenge_name}*\n\n"
-            f"Your photo has been sent to the admin for review.\n"
+            f"Your {media_type} has been sent to the admin for review.\n"
             f"You will be notified once it's approved."
         )
         
         await update.message.reply_text(response, parse_mode='Markdown')
         
-        # Send photo to admin for review with approval/rejection buttons
+        # Send photo/video to admin for review with approval/rejection buttons
         if self.admin_id:
             try:
                 keyboard = [
@@ -2462,21 +2505,32 @@ class AmazingRaceBot:
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                await context.bot.send_photo(
-                    chat_id=self.admin_id,
-                    photo=photo.file_id,
-                    caption=(
-                        f"📷 *Photo Submission - Challenge Completion*\n"
-                        f"Team: {team_name}\n"
-                        f"Challenge #{challenge_id}: {challenge_name}\n"
-                        f"Submitted by: {user.first_name}\n\n"
-                        f"Submission ID: `{submission_id}`"
-                    ),
-                    parse_mode='Markdown',
-                    reply_markup=reply_markup
+                caption_text = (
+                    f"{media_icon} *{media_type.capitalize()} Submission - Challenge Completion*\n"
+                    f"Team: {team_name}\n"
+                    f"Challenge #{challenge_id}: {challenge_name}\n"
+                    f"Submitted by: {user.first_name}\n\n"
+                    f"Submission ID: `{submission_id}`"
                 )
+                
+                if media_type == "photo":
+                    await context.bot.send_photo(
+                        chat_id=self.admin_id,
+                        photo=media.file_id,
+                        caption=caption_text,
+                        parse_mode='Markdown',
+                        reply_markup=reply_markup
+                    )
+                else:  # video
+                    await context.bot.send_video(
+                        chat_id=self.admin_id,
+                        video=media.file_id,
+                        caption=caption_text,
+                        parse_mode='Markdown',
+                        reply_markup=reply_markup
+                    )
             except Exception as e:
-                logger.error(f"Failed to send photo to admin: {e}")
+                logger.error(f"Failed to send {media_type} to admin: {e}")
         
         # Remove pending submission
         del context.bot_data['pending_submissions'][user.id]
@@ -3679,6 +3733,9 @@ class AmazingRaceBot:
         
         # Add photo handler for photo submissions
         application.add_handler(MessageHandler(filters.PHOTO, self.photo_handler))
+        
+        # Add video handler for video submissions (uses same handler as photos)
+        application.add_handler(MessageHandler(filters.VIDEO, self.photo_handler))
         
         # Add handler for unrecognized text messages (must be last)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unrecognized_message_handler))
